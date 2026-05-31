@@ -1,24 +1,24 @@
 #pragma once
 #include "RenderConfig.hpp"
-#include "engine/CollatzEngine.hpp"   // per CollatzCollection
+#include "engine/CollatzEngine.hpp"
 #include <SFML/Graphics/RenderWindow.hpp>
 
 class Renderer {
 public:
     virtual ~Renderer() = default;
 
-    // Costruisce la struttura dati interna dalla collection
+    // Builds the internal data structure from the Collatz collection
     virtual void build(const CollatzCollection&,
                        const RenderConfig&,
                        sf::Vector2u windowSize) = 0;
 
-    // Ricalcola solo la geometria (angolo/lunghezza cambiati), azzeraanimazione
+    // Recomputes geometry only (angle/length changed), resets animation
     virtual void applyConfig(const RenderConfig&, sf::Vector2u windowSize) = 0;
 
-    // Ricolora le forme già disegnate senza toccare la geometria
+    // Recolors already-drawn shapes without touching geometry or animation
     virtual void recolor(const RenderConfig&) = 0;
 
-    // Avanza l'animazione di N passi
+    // Advances the animation by N steps
     virtual void update(int steps) = 0;
 
     virtual void draw(sf::RenderWindow&) const = 0;

@@ -8,12 +8,10 @@ void FeatherRenderer::build(const CollatzCollection& col,
                             const RenderConfig& cfg,
                             sf::Vector2u winSize)
 {
-    config_    = cfg;
-    sf::Vector2f origin{
-        static_cast<float>(winSize.x) * 0.5f,
-        static_cast<float>(winSize.y) * 0.9f
-    };
-    tree_.build(col, cfg, origin);
+    config_ = cfg;
+    // Pass the window centre: FeatherTree will recentre the bounding
+    // box of the whole feather onto this point after computing geometry.
+    tree_.build(col, cfg, windowCentre(winSize));
     bfsOrder_  = tree_.getBFSOrder();
     maxWeight_ = tree_.maxWeight();
     shapes_.clear();
@@ -24,11 +22,7 @@ void FeatherRenderer::build(const CollatzCollection& col,
 void FeatherRenderer::applyConfig(const RenderConfig& cfg, sf::Vector2u winSize)
 {
     config_ = cfg;
-    sf::Vector2f origin{
-        static_cast<float>(winSize.x) * 0.5f,
-        static_cast<float>(winSize.y) * 0.9f
-    };
-    tree_.recomputeGeometry(cfg, origin);
+    tree_.recomputeGeometry(cfg, windowCentre(winSize));
     bfsOrder_  = tree_.getBFSOrder();
     maxWeight_ = tree_.maxWeight();
     shapes_.clear();
@@ -83,8 +77,8 @@ sf::Color FeatherRenderer::nodeColor(const FeatherNode& node) const
             return config_.fixedColor;
         case Command::ColorMode::PerParity:
             return (node.value % 2 == 0)
-                ? sf::Color{ 100, 149, 237, 255 }  // blue — pari
-                : sf::Color{ 255, 140,   0, 255 };  // arancio — dispari
+                ? sf::Color{ 100, 149, 237, 255 }  // blue  — even
+                : sf::Color{ 255, 140,   0, 255 };  // orange — odd
         case Command::ColorMode::PerSequence: {
             float hue = std::fmod(static_cast<float>(node.colorHint) * 137.508f, 360.f);
             return hsvToColor(hue, 0.75f, 0.9f);

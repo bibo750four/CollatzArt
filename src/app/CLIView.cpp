@@ -11,16 +11,17 @@ static void clearScreen() {
         std::cout << "\n---\n";
 }
 
+// Returns the number of Unicode codepoints in a UTF-8 string
+// (counts only leading bytes, not continuation bytes)
 static std::size_t utf8Len(const std::string& s)
 {
     std::size_t count = 0;
     for (unsigned char c : s)
-        if ((c & 0xC0u) != 0x80u) ++count;  // conta solo i byte "leading", non i continuation
+        if ((c & 0xC0u) != 0x80u) ++count;
     return count;
 }
 
-
-// Barra velocità visuale  ████░░░░
+// Visual speed bar  ████░░░░
 static std::string speedBar(int speed)
 {
     std::string bar;
@@ -32,16 +33,16 @@ static std::string speedBar(int speed)
 static std::string colorModeStr(Command::ColorMode m)
 {
     switch (m) {
-        case Command::ColorMode::Fixed:       return "fisso";
-        case Command::ColorMode::PerSequence: return "per sequenza";
-        case Command::ColorMode::PerParity:   return "per parità";
+        case Command::ColorMode::Fixed:       return "fixed";
+        case Command::ColorMode::PerSequence: return "per sequence";
+        case Command::ColorMode::PerParity:   return "per parity";
     }
     return "";
 }
 
 static std::string segmentModeStr(Command::SegmentMode m)
 {
-    return m == Command::SegmentMode::Constant ? "costante" : "decrescente";
+    return m == Command::SegmentMode::Constant ? "constant" : "decreasing";
 }
 
 // ─────────────────────────────────────────────
@@ -57,7 +58,7 @@ void CLIView::run()
         if (!parseLine(line)) break;
         printMenu();
     }
-    // se usciamo per 'q', avvisiamo il thread principale
+    // If we exit because the user typed 'q', notify the main thread
     if (!stop_.load())
         queue_.push({ Command::Type::Quit });
 }
@@ -69,7 +70,7 @@ void CLIView::printMenu() const
 
     const int W = 46;
 
-    // ripete una stringa UTF-8 n volte (non un char — \u2550 è 3 byte)
+    // Repeats a UTF-8 string n times (not a single char — \u2550 is 3 bytes)
     auto rep = [](const std::string& s, int n) {
         std::string r;
         r.reserve(s.size() * static_cast<std::size_t>(n));
@@ -79,7 +80,7 @@ void CLIView::printMenu() const
 
     auto row = [&](const std::string& s) {
         int padding = (W - 4) - static_cast<int>(utf8Len(s));
-        if (padding < 0) padding = 0;   // stringa più lunga del box: tronca il padding
+        if (padding < 0) padding = 0;   // string wider than box: clamp padding
         std::cout << "\u2551  " << s
                   << std::string(static_cast<std::size_t>(padding), ' ')
                   << "\u2551\n";
@@ -93,36 +94,36 @@ void CLIView::printMenu() const
     row("Collatz Feather Renderer");
     sep();
 
-    row("Stato:    " + std::string(state_.playing ? "PLAY \u25B6" : "PAUSA \u23F8"));
+    row("State:  " + std::string(state_.playing ? "PLAY \u25B6" : "PAUSE \u23F8"));
 
     {
         std::ostringstream ss;
-        ss << "Angolo \u03B8: " << std::fixed << std::setprecision(1)
+        ss << "Angle \u03B8: " << std::fixed << std::setprecision(1)
            << state_.angle << "\u00B0";
         row(ss.str());
     }
     {
         std::ostringstream ss;
-        ss << "Segmento: " << std::fixed << std::setprecision(1)
+        ss << "Segment: " << std::fixed << std::setprecision(1)
            << state_.segmentLen << "  [" << segmentModeStr(state_.segmentMode) << "]";
         row(ss.str());
     }
 
-    row("Colore:   " + colorModeStr(state_.colorMode));
-    row("Velocit\u00E0: " + speedBar(state_.speed)
+    row("Color:  " + colorModeStr(state_.colorMode));
+    row("Speed:  " + speedBar(state_.speed)
         + "  (" + std::to_string(state_.speed) + "/8)");
 
     sep();
-    row("COMANDI");
-    row("p          \u2192 play / pausa");
+    row("COMMANDS");
+    row("p          \u2192 play / pause");
     row("r          \u2192 reset");
-    row("a <gradi>  \u2192 angolo  (es. a 20.0)");
-    row("l <val>    \u2192 lunghezza segmento");
-    row("lc / ld    \u2192 costante / decrescente");
-    row("cf/cs/cp   \u2192 colore fisso/sequenza/parit\u00E0");
-    row("+  / -     \u2192 velocit\u00E0");
+    row("a <deg>    \u2192 angle  (e.g. a 20.0)");
+    row("l <val>    \u2192 segment length");
+    row("lc / ld    \u2192 constant / decreasing");
+    row("cf/cs/cp   \u2192 color fixed/sequence/parity");
+    row("+  / -     \u2192 speed");
     row("f          \u2192 fullscreen");
-    row("q          \u2192 esci");
+    row("q          \u2192 quit");
 
     std::cout << "\u255A" << rep("\u2550", W - 2) << "\u255D\n";
     std::cout << "> " << std::flush;
@@ -136,7 +137,7 @@ bool CLIView::parseLine(const std::string& line)
     ss >> token;
     if (token.empty()) return true;
 
-    // --- play / pausa ---
+    // --- play / pause ---
     if (token == "p") {
         state_.playing = !state_.playing;
         queue_.push({ state_.playing ? Command::Type::Play : Command::Type::Pause });
@@ -150,33 +151,33 @@ bool CLIView::parseLine(const std::string& line)
         return true;
     }
 
-    // --- angolo ---
+    // --- angle ---
     if (token == "a") {
         float val;
         if (ss >> val && val > 0.f && val < 180.f) {
             state_.angle = val;
             queue_.push({ Command::Type::SetAngle, val });
         } else {
-            std::cout << "Valore non valido. Usa: a <gradi>  (0 < θ < 180)\n";
+            std::cout << "Invalid value. Use: a <degrees>  (0 < θ < 180)\n";
             std::cin.ignore();
         }
         return true;
     }
 
-    // --- lunghezza segmento ---
+    // --- segment length ---
     if (token == "l") {
         float val;
         if (ss >> val && val > 0.f) {
             state_.segmentLen = val;
             queue_.push({ Command::Type::SetSegmentLen, val });
         } else {
-            std::cout << "Valore non valido. Usa: l <numero positivo>\n";
+            std::cout << "Invalid value. Use: l <positive number>\n";
             std::cin.ignore();
         }
         return true;
     }
 
-    // --- modalità segmento ---
+    // --- segment mode ---
     if (token == "lc") {
         state_.segmentMode = Command::SegmentMode::Constant;
         queue_.push({ Command::Type::SetSegmentMode, 0.f,
@@ -190,7 +191,7 @@ bool CLIView::parseLine(const std::string& line)
         return true;
     }
 
-    // --- modalità colore ---
+    // --- color mode ---
     if (token == "cf") {
         state_.colorMode = Command::ColorMode::Fixed;
         queue_.push({ Command::Type::SetColorMode, 0.f, Command::ColorMode::Fixed });
@@ -207,7 +208,7 @@ bool CLIView::parseLine(const std::string& line)
         return true;
     }
 
-    // --- velocità ---
+    // --- speed ---
     if (token == "+") {
         state_.speed = std::min(8, state_.speed + 1);
         queue_.push({ Command::Type::SpeedUp });
@@ -228,9 +229,9 @@ bool CLIView::parseLine(const std::string& line)
     // --- quit ---
     if (token == "q") return false;
 
-    // comando sconosciuto: stampa avviso senza ridisegnare il menu
-    std::cout << "Comando non riconosciuto: '" << token << "'\n";
-    std::cout << "Premi Invio per continuare...";
+    // Unknown command: print a warning without redrawing the menu
+    std::cout << "Unknown command: '" << token << "'\n";
+    std::cout << "Press Enter to continue...";
     std::cin.ignore();
     return true;
 }

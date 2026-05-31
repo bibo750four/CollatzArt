@@ -4,13 +4,13 @@
 #include <string>
 #include <atomic>
 
-// Stato corrente visualizzato nel menu.
-// CLIView ne mantiene una copia locale: si aggiorna ogni volta
-// che invia un comando, senza mai leggere dal thread di render.
+// Snapshot of the current renderer state shown in the CLI menu.
+// CLIView keeps a local copy that it updates whenever it sends a command,
+// without ever reading from the render thread.
 struct DisplayState
 {
     bool        playing     { false };
-    float       angle       { 15.f };   // gradi
+    float       angle       { 15.f };   // degrees
     float       segmentLen  { 8.f };
     Command::SegmentMode segmentMode { Command::SegmentMode::Constant };
     Command::ColorMode   colorMode   { Command::ColorMode::Fixed };
@@ -22,17 +22,17 @@ class CLIView
 public:
     explicit CLIView(CommandQueue<Command>& queue);
 
-    // Avvia il loop — da chiamare su un thread secondario.
-    // Blocca finché l'utente non invia 'q'.
+    // Starts the input loop — must be called on a secondary thread.
+    // Blocks until the user types 'q'.
     void run();
 
-    // Il thread principale può segnalare di uscire
-    // (es. l'utente chiude la finestra SFML).
+    // Lets the main thread signal that the CLI should stop
+    // (e.g. the user closed the SFML window).
     void requestStop() { stop_.store(true); }
 
 private:
     void printMenu() const;
-    bool parseLine(const std::string& line);  // true → continua, false → quit
+    bool parseLine(const std::string& line);  // true → keep running, false → quit
 
     CommandQueue<Command>& queue_;
     DisplayState           state_;

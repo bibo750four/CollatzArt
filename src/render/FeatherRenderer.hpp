@@ -17,18 +17,24 @@ public:
     bool isDone() const override;
 
 private:
-    static sf::Color         hsvToColor(float h, float s, float v);
-    sf::Color                nodeColor(const FeatherNode& node) const;
+    static sf::Color          hsvToColor(float h, float s, float v);
+    sf::Color                 nodeColor(const FeatherNode& node) const;
     static sf::RectangleShape makeThickLine(sf::Vector2f from, sf::Vector2f to,
-                                             float thickness, sf::Color color);
-    void                     addShape(std::size_t bfsIndex);
+                                            float thickness, sf::Color color);
+    void                      addShape(std::size_t bfsIndex);
 
-    FeatherTree                   tree_;
-    std::vector<int>              bfsOrder_;
-    std::size_t                   cursor_    { 0 };
-    int                           maxWeight_ { 1 };
+    // Returns the window centre as a Vector2f
+    static sf::Vector2f windowCentre(sf::Vector2u size) {
+        return { static_cast<float>(size.x) * 0.5f,
+                 static_cast<float>(size.y) * 0.5f };
+    }
+
+    FeatherTree                     tree_;
+    std::vector<int>                bfsOrder_;
+    std::size_t                     cursor_    { 0 };
+    int                             maxWeight_ { 1 };
     std::vector<sf::RectangleShape> shapes_;
-    RenderConfig                  config_;
+    RenderConfig                    config_;
 
     static constexpr float kMinThickness = 1.f;
     static constexpr float kMaxThickness = 8.f;

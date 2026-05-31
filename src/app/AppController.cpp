@@ -96,7 +96,7 @@ void AppController::applyCommand(const Command& cmd,
 
         case Command::Type::SetColorMode:
             config_.colorMode = cmd.colorMode;
-            renderer_.recolor(config_);   // solo ricolora, non azzera l'animazione
+            renderer_.recolor(config_);   // recolor only, do not reset animation
             break;
 
         case Command::Type::ToggleFullscreen:

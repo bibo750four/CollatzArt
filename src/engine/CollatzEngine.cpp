@@ -8,7 +8,7 @@ Sequence CollatzEngine::compute(int64_t n)
         throw std::invalid_argument("n must be >= 1");
 
     Sequence seq;
-    seq.reserve(300); // most of the sequences have less than 300 steps
+    seq.reserve(300); // most sequences have fewer than 300 steps
     seq.push_back(n);
 
     while (n != 1)
@@ -39,5 +39,5 @@ int64_t CollatzEngine::maxValue(const Sequence& s)
 
 std::size_t CollatzEngine::stoppingTime(const Sequence& s)
 {
-    return s.size() - 1; // il primo elemento è n, l'ultimo è 1
+    return s.size() - 1; // first element is n, last is 1
 }

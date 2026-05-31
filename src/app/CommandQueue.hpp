@@ -7,14 +7,14 @@ template<typename T>
 class CommandQueue
 {
 public:
-    // chiamato dal thread CLI
+    // Called from the CLI thread
     void push(T cmd)
     {
         std::lock_guard lock(mutex_);
         queue_.push(std::move(cmd));
     }
 
-    // chiamato dal thread principale nel render loop — non bloccante
+    // Called from the main render-loop thread — non-blocking
     std::optional<T> tryPop()
     {
         std::lock_guard lock(mutex_);

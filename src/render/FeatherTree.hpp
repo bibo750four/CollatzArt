@@ -10,12 +10,12 @@
 struct FeatherNode {
     int64_t             value      { 0 };
     int                 parentIdx  { -1 };
-    int                 weight     { 1 };   // sequenze che passano per questo nodo
-    float               angle      { 0.f }; // radianti, coordinate schermo
+    int                 weight     { 1 };   // number of sequences passing through this node
+    float               angle      { 0.f }; // radians, screen coordinates
     int                 depth      { 0 };
     sf::Vector2f        pos        { 0.f, 0.f };
     std::vector<int>    childIndices;
-    int64_t             colorHint  { 0 };   // valore di partenza della prima sequenza
+    int64_t             colorHint  { 0 };   // starting value of the first sequence through this node
 };
 
 class FeatherTree {
@@ -43,6 +43,10 @@ private:
 
     void insertSequence(const Sequence& seq, int64_t startVal);
     void computeGeometry(const RenderConfig& cfg, sf::Vector2f origin);
+
+    // After computeGeometry, translates all node positions so that
+    // the bounding box of the tree is centred on `centre`.
+    void centreOnWindow(sf::Vector2f centre);
 
     std::vector<FeatherNode>                                   nodes_;
     std::unordered_map<std::pair<int,int64_t>, int, PairHash>  lookup_;
