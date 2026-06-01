@@ -10,8 +10,8 @@
 struct DisplayState
 {
     bool        playing     { false };
-    float       angle       { 15.f };   // degrees
-    float       segmentLen  { 8.f };
+    float       angle       { 5.f };   // degrees
+    float       segmentLen  { 1.f };
     Command::SegmentMode segmentMode { Command::SegmentMode::Constant };
     Command::ColorMode   colorMode   { Command::ColorMode::Fixed };
     int         speed       { 4 };      // 1..8

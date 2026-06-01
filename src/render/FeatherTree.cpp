@@ -4,6 +4,7 @@
 #include <stack>
 #include <queue>
 #include <limits>
+#include <iostream>
 
 void FeatherTree::build(const CollatzCollection& collection,
                         const RenderConfig& cfg,
@@ -14,6 +15,7 @@ void FeatherTree::build(const CollatzCollection& collection,
 
     // Root node: value 1, no parent
     nodes_.push_back(FeatherNode{ 1, -1, 0, 0.f, 0, {}, {}, 0 });
+    std::cout << "FeatherTree::build called with " << collection.size() << " sequences.\n";
 
     for (const auto& [startVal, seq] : collection)
         insertSequence(seq, startVal);
@@ -67,6 +69,8 @@ void FeatherTree::insertSequence(const Sequence& seq, int64_t startVal)
 // ─────────────────────────────────────────────────────────────
 void FeatherTree::computeGeometry(const RenderConfig& cfg, sf::Vector2f origin)
 {
+    std::cout << "computeGeometry called. origin: [" << origin.x << ", " << origin.y << "]\n";
+
     const float pi       = std::numbers::pi_v<float>;
     const float thetaRad = cfg.angle * pi / 180.f;
     const float initAngle = -pi / 2.f;   // points upward on screen (y grows downward)
@@ -133,6 +137,7 @@ void FeatherTree::computeGeometry(const RenderConfig& cfg, sf::Vector2f origin)
         if (n.pos.y < minY) minY = n.pos.y;
         if (n.pos.y > maxY) maxY = n.pos.y;
     }
+    std::cout << "Bounding box: minX=" << minX << ", maxX=" << maxX << ", minY=" << minY << ", maxY=" << maxY << "\n";
 
     // Centre of the bounding box
     float bbCentreX = (minX + maxX) * 0.5f;
@@ -143,6 +148,8 @@ void FeatherTree::computeGeometry(const RenderConfig& cfg, sf::Vector2f origin)
     sf::Vector2f offset{ origin.x - bbCentreX, origin.y - bbCentreY };
     for (auto& n : nodes_)
         n.pos += offset;
+
+    std::cout << "Offset applied for centering: [" << offset.x << ", " << offset.y << "]\n";
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -168,3 +175,4 @@ int FeatherTree::maxWeight() const
     for (const auto& n : nodes_) maxW = std::max(maxW, n.weight);
     return maxW;
 }
+

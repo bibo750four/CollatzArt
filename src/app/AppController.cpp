@@ -43,7 +43,7 @@ void AppController::run(const CollatzCollection& collection,
         }
 
         // 4 — render
-        window_.clear(sf::Color::Black);
+        window_.clear(sf::Color::White);
         renderer_.draw(window_);
         window_.display();
     }
