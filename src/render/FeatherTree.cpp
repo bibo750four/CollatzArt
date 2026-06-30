@@ -1,10 +1,36 @@
 #include "FeatherTree.hpp"
+#include "engine/CollatzEngine.hpp"
 #include <numbers>
 #include <cmath>
 #include <stack>
 #include <queue>
 #include <limits>
 #include <iostream>
+
+void FeatherTree::insertSequence(const Sequence& seq, int64_t startVal) {
+    if (seq.empty()) return;
+
+    int currentIdx = 0;   // root
+    nodes_[0].weight++;
+
+    // Walk the sequence in reverse, skipping the first element (1 = root)
+    for (auto it = seq.rbegin() + 1; it != seq.rend(); ++it) {
+        int64_t val = *it;
+        auto    key = std::make_pair(currentIdx, val);
+        auto    found = lookup_.find(key);
+
+        if (found == lookup_.end()) {
+            int newIdx = static_cast<int>(nodes_.size());
+            nodes_.push_back({ val, currentIdx, 1, 0.f, 0, {0.f, 0.f}, {}, startVal });
+            nodes_[currentIdx].childIndices.push_back(newIdx);
+            lookup_[key] = newIdx;
+            currentIdx = newIdx;
+        } else {
+            nodes_[found->second].weight++;
+            currentIdx = found->second;
+        }
+    }
+}
 
 void FeatherTree::build(const CollatzCollection& collection,
                         const RenderConfig& cfg,
@@ -29,40 +55,13 @@ void FeatherTree::recomputeGeometry(const RenderConfig& cfg, sf::Vector2f origin
 }
 
 // ─────────────────────────────────────────────────────────────
-void FeatherTree::insertSequence(const Sequence& seq, int64_t startVal)
-{
-    if (seq.empty()) return;
-
-    int currentIdx = 0;   // root
-    nodes_[0].weight++;
-
-    // Walk the sequence in reverse, skipping the first element (1 = root)
-    for (auto it = seq.rbegin() + 1; it != seq.rend(); ++it) {
-        int64_t val = *it;
-        auto    key = std::make_pair(currentIdx, val);
-        auto    found = lookup_.find(key);
-
-        if (found == lookup_.end()) {
-            int newIdx = static_cast<int>(nodes_.size());
-            nodes_.push_back({ val, currentIdx, 1, 0.f, 0,
-                               {0.f, 0.f}, {}, startVal });
-            nodes_[currentIdx].childIndices.push_back(newIdx);
-            lookup_[key] = newIdx;
-            currentIdx = newIdx;
-        } else {
-            nodes_[found->second].weight++;
-            currentIdx = found->second;
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
 // Geometry uses logarithmic axes:
 //
 //   radial distance  r(depth) = segmentLen * log2(depth + 2)
 //       — compresses deep branches so they remain visible
 //
-//   angular step stays the same as before (+/-thetaRad per branch)
+//   angular step uses cfg.evenAngle for even-valued nodes and
+//   cfg.oddAngle for odd-valued nodes (+/- angles applied accordingly)
 //
 // After all positions are computed the whole tree is translated so
 // that its bounding box is centred on the window.
@@ -71,9 +70,10 @@ void FeatherTree::computeGeometry(const RenderConfig& cfg, sf::Vector2f origin)
 {
     std::cout << "computeGeometry called. origin: [" << origin.x << ", " << origin.y << "]\n";
 
-    const float pi       = std::numbers::pi_v<float>;
-    const float thetaRad = cfg.angle * pi / 180.f;
-    const float initAngle = -pi / 2.f;   // points upward on screen (y grows downward)
+    const float pi          = std::numbers::pi_v<float>;
+    const float evenThetaRad = cfg.evenAngle * pi / 180.f;
+    const float oddThetaRad  = cfg.oddAngle  * pi / 180.f;
+    const float initAngle   = -pi / 2.f;   // points upward on screen (y grows downward)
 
     nodes_[0].pos   = { 0.f, 0.f };  // temporarily at origin; will be recentred later
     nodes_[0].angle = initAngle;
@@ -92,9 +92,9 @@ void FeatherTree::computeGeometry(const RenderConfig& cfg, sf::Vector2f origin)
             auto& child = nodes_[childIdx];
             child.depth = parent.depth + 1;
 
-            // Even value → branch right (+θ in screen space, y grows downward)
-            // Odd value  → branch left  (-θ)
-            float delta = (child.value % 2 == 0) ? +thetaRad : -thetaRad;
+            // Even value → branch right (+cfg.evenAngle in screen space, y grows downward)
+            // Odd value  → branch left  (-cfg.oddAngle)
+            float delta = (child.value % 2 == 0) ? +evenThetaRad : -oddThetaRad;
             child.angle = parent.angle + delta;
 
             // ── Logarithmic radial distance ──────────────────────────────
@@ -175,4 +175,3 @@ int FeatherTree::maxWeight() const
     for (const auto& n : nodes_) maxW = std::max(maxW, n.weight);
     return maxW;
 }
-

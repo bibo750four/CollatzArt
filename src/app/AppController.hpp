@@ -12,6 +12,14 @@ public:
     void run(const CollatzCollection& collection, const RenderConfig& initialConfig);
 
 private:
+    /**
+     * Applies a given command to the current application state.
+     * Handles commands including playback control, toggling fullscreen,
+     * rebuilding the renderer, and updating render parameters.
+     * New commands handled:
+     *   - Command::Type::SetEvenAngle: sets the angle for even numbers.
+     *   - Command::Type::SetOddAngle: sets the angle for odd numbers.
+     */
     void applyCommand(const Command& cmd, const CollatzCollection& collection);
     void toggleFullscreen(const CollatzCollection& collection);
     void rebuild(const CollatzCollection& collection);

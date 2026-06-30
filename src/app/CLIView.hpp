@@ -11,6 +11,8 @@ struct DisplayState
 {
     bool        playing     { false };
     float       angle       { 5.f };   // degrees
+    float       evenAngle   { 5.f };   // degrees
+    float       oddAngle    { 5.f };   // degrees
     float       segmentLen  { 1.f };
     Command::SegmentMode segmentMode { Command::SegmentMode::Constant };
     Command::ColorMode   colorMode   { Command::ColorMode::Fixed };
@@ -38,3 +40,4 @@ private:
     DisplayState           state_;
     std::atomic<bool>      stop_{ false };
 };
+

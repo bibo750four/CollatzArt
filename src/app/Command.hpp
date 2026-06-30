@@ -6,6 +6,8 @@ struct Command
         Play, Pause, Reset,
         SpeedUp, SpeedDown,
         SetAngle,       // payload: floatVal (degrees)
+        SetEvenAngle,   // payload: floatVal (degrees)
+        SetOddAngle,    // payload: floatVal (degrees)
         SetSegmentLen,  // payload: floatVal (length)
         SetSegmentMode, // payload: segmentMode
         SetColorMode,   // payload: colorMode

@@ -98,8 +98,20 @@ void CLIView::printMenu() const
 
     {
         std::ostringstream ss;
-        ss << "Angle \u03B8: " << std::fixed << std::setprecision(1)
+        ss << "Angle \u03B8 (both): " << std::fixed << std::setprecision(1)
            << state_.angle << "\u00B0";
+        row(ss.str());
+    }
+    {
+        std::ostringstream ss;
+        ss << "Even angle: " << std::fixed << std::setprecision(1)
+           << state_.evenAngle << "\u00B0";
+        row(ss.str());
+    }
+    {
+        std::ostringstream ss;
+        ss << "Odd angle:  " << std::fixed << std::setprecision(1)
+           << state_.oddAngle << "\u00B0";
         row(ss.str());
     }
     {
@@ -117,7 +129,9 @@ void CLIView::printMenu() const
     row("COMMANDS");
     row("p          \u2192 play / pause");
     row("r          \u2192 reset");
-    row("a <deg>    \u2192 angle  (e.g. a 20.0)");
+    row("a <deg>    \u2192 angle (both even/odd)");
+    row("ae <deg>   \u2192 even angle");
+    row("ao <deg>   \u2192 odd angle");
     row("l <val>    \u2192 segment length");
     row("lc / ld    \u2192 constant / decreasing");
     row("cf/cs/cp   \u2192 color fixed/sequence/parity");
@@ -151,14 +165,44 @@ bool CLIView::parseLine(const std::string& line)
         return true;
     }
 
-    // --- angle ---
+    // --- angle (both) ---
     if (token == "a") {
         float val;
         if (ss >> val && val > 0.f && val < 180.f) {
             state_.angle = val;
+            state_.evenAngle = val;
+            state_.oddAngle = val;
             queue_.push({ Command::Type::SetAngle, val });
+            queue_.push({ Command::Type::SetEvenAngle, val });
+            queue_.push({ Command::Type::SetOddAngle, val });
         } else {
             std::cout << "Invalid value. Use: a <degrees>  (0 < θ < 180)\n";
+            std::cin.ignore();
+        }
+        return true;
+    }
+
+    // --- even angle ---
+    if (token == "ae") {
+        float val;
+        if (ss >> val && val > 0.f && val < 180.f) {
+            state_.evenAngle = val;
+            queue_.push({ Command::Type::SetEvenAngle, val });
+        } else {
+            std::cout << "Invalid value. Use: ae <degrees>  (0 < θ < 180)\n";
+            std::cin.ignore();
+        }
+        return true;
+    }
+
+    // --- odd angle ---
+    if (token == "ao") {
+        float val;
+        if (ss >> val && val > 0.f && val < 180.f) {
+            state_.oddAngle = val;
+            queue_.push({ Command::Type::SetOddAngle, val });
+        } else {
+            std::cout << "Invalid value. Use: ao <degrees>  (0 < θ < 180)\n";
             std::cin.ignore();
         }
         return true;

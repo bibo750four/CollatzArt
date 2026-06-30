@@ -80,6 +80,22 @@ void AppController::applyCommand(const Command& cmd,
             playback_.play();
             break;
 
+        // Handle setting the even angle
+        case Command::Type::SetEvenAngle:
+            config_.evenAngle = cmd.floatVal;
+            renderer_.applyConfig(config_, window_.getSize());
+            playback_.reset();
+            playback_.play();
+            break;
+
+        // Handle setting the odd angle
+        case Command::Type::SetOddAngle:
+            config_.oddAngle = cmd.floatVal;
+            renderer_.applyConfig(config_, window_.getSize());
+            playback_.reset();
+            playback_.play();
+            break;
+
         case Command::Type::SetSegmentLen:
             config_.segmentLen = cmd.floatVal;
             renderer_.applyConfig(config_, window_.getSize());
@@ -129,3 +145,4 @@ void AppController::rebuild(const CollatzCollection& collection)
 {
     renderer_.build(collection, config_, window_.getSize());
 }
+
