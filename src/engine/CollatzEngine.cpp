@@ -1,6 +1,7 @@
 #include "CollatzEngine.hpp"
 #include <stdexcept>
 #include <algorithm>
+#include <climits>
 
 Sequence CollatzEngine::compute(int64_t n)
 {
@@ -8,12 +9,21 @@ Sequence CollatzEngine::compute(int64_t n)
         throw std::invalid_argument("n must be >= 1");
 
     Sequence seq;
-    seq.reserve(300); // most sequences have fewer than 300 steps
+    seq.reserve(500); // Increased from 300 to handle longer sequences safely
     seq.push_back(n);
 
     while (n != 1)
     {
-        n = (n % 2 == 0) ? n / 2 : 3 * n + 1;
+        if (n % 2 == 0) {
+            n = n / 2;
+        } else {
+            // Check for overflow: 3*n + 1 > INT64_MAX
+            // Rearranged: n > (INT64_MAX - 1) / 3
+            if (n > (INT64_MAX - 1) / 3) {
+                throw std::overflow_error("Collatz sequence overflow: 3*n+1 exceeds int64_t maximum");
+            }
+            n = 3 * n + 1;
+        }
         seq.push_back(n);
     }
     return seq;

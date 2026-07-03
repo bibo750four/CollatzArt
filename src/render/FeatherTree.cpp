@@ -7,6 +7,9 @@
 #include <limits>
 #include <iostream>
 
+// Safety limit for maximum number of nodes to prevent memory exhaustion
+constexpr std::size_t MAX_NODES = 1000000;
+
 void FeatherTree::insertSequence(const Sequence& seq, int64_t startVal) {
     if (seq.empty()) return;
 
@@ -48,8 +51,15 @@ void FeatherTree::build(const CollatzCollection& collection,
     std::cout << "FeatherTree::build called with " << collection.size() << " sequences.\n";
     std::cout.flush();
 
-    for (const auto& [startVal, seq] : collection)
+    for (const auto& [startVal, seq] : collection) {
         insertSequence(seq, startVal);
+        
+        // Safety check: prevent unbounded memory growth
+        if (nodes_.size() >= MAX_NODES) {
+            throw std::runtime_error("Maximum node limit (" + std::to_string(MAX_NODES) + 
+                                     ") exceeded. Please reduce range or step.");
+        }
+    }
 
     std::cout << "FeatherTree::build: " << nodes_.size() << " nodes created.\n";
     std::cout.flush();
