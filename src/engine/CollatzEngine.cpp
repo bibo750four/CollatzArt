@@ -3,6 +3,20 @@
 #include <algorithm>
 #include <climits>
 
+/**
+ * Computes the Collatz sequence for a given starting number.
+ * 
+ * The Collatz sequence is generated as follows:
+ * - If n is even: n → n/2
+ * - If n is odd: n → 3*n + 1
+ * 
+ * The sequence terminates when n reaches 1.
+ * 
+ * @param n The starting number (must be >= 1).
+ * @return The computed Collatz sequence.
+ * @throws std::invalid_argument If n < 1.
+ * @throws std::overflow_error If 3*n + 1 exceeds INT64_MAX (overflow check).
+ */
 Sequence CollatzEngine::compute(int64_t n)
 {
     if (n < 1)
@@ -18,7 +32,7 @@ Sequence CollatzEngine::compute(int64_t n)
             n = n / 2;
         } else {
             // Check for overflow: 3*n + 1 > INT64_MAX
-            // Rearranged: n > (INT64_MAX - 1) / 3
+            // Rearranged to avoid overflow: n > (INT64_MAX - 1) / 3
             if (n > (INT64_MAX - 1) / 3) {
                 throw std::overflow_error("Collatz sequence overflow: 3*n+1 exceeds int64_t maximum");
             }

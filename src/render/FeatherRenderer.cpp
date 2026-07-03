@@ -178,18 +178,30 @@ sf::RectangleShape FeatherRenderer::makeThickLine(
 // Maximum size for sequential order to prevent memory exhaustion
 constexpr std::size_t MAX_SEQUENTIAL_ORDER = 500000;
 
+/**
+ * Builds a sequential animation order for rendering.
+ * 
+ * The order is constructed by:
+ * 1. Sorting all starting numbers in descending order (highest first).
+ * 2. For each starting number, walking from its leaf node up to the root.
+ * 3. Reversing the path to get root-to-leaf order (ensures parent nodes are drawn first).
+ * 4. Skipping the root node (no line to draw for it).
+ * 
+ * This creates a visually appealing animation where sequences grow from the center outward,
+ * starting with the highest values.
+ */
 void FeatherRenderer::buildSequentialOrder()
 {
-    // Build a sequential animation order: complete sequences from highest to lowest starting number
+    // Clear existing order to start fresh
     sequentialOrder_.clear();
     
-    // Collect all starting numbers from the collection, sorted in descending order
+    // Collect all starting numbers from the collection and sort in descending order
     std::vector<int64_t> startingNumbers;
     for (const auto& [startVal, seq] : collection_) {
         startingNumbers.push_back(startVal);
     }
     
-    // Sort in descending order (highest first)
+    // Sort in descending order (highest starting numbers first)
     std::sort(startingNumbers.begin(), startingNumbers.end(), std::greater<>());
     
     // For each starting number, find all nodes that belong to its sequence
@@ -290,6 +302,17 @@ sf::FloatRect FeatherRenderer::computeTreeBounds() const
     return sf::FloatRect({minX, minY}, {maxX - minX, maxY - minY});
 }
 
+/**
+ * Adjusts the view to fit the entire tree within the window, with a margin.
+ * 
+ * Steps:
+ * 1. Compute the bounding box of the tree.
+ * 2. If the tree is empty or a single point, use a default view.
+ * 3. Add a 10% margin around the tree to ensure visual clarity.
+ * 4. Center the view on the tree's bounding box.
+ * 
+ * This ensures the tree is always visible and properly scaled in the window.
+ */
 void FeatherRenderer::setViewToFitTree(sf::Vector2u windowSize)
 {
     sf::FloatRect treeBounds = computeTreeBounds();
@@ -305,18 +328,19 @@ void FeatherRenderer::setViewToFitTree(sf::Vector2u windowSize)
     }
     
     // Add margin around the tree (10% on each side = 20% total)
+    // This ensures the tree doesn't touch the edges of the window.
     const float marginFactor = 1.2f;  // 10% margin on each side
     float width = treeBounds.size.x * marginFactor;
     float height = treeBounds.size.y * marginFactor;
     
-    // Center of the tree
+    // Center of the tree's bounding box
     sf::Vector2f center(
         treeBounds.position.x + treeBounds.size.x * 0.5f,
         treeBounds.position.y + treeBounds.size.y * 0.5f
     );
     
     // Create view that always shows the entire tree with margin
-    // SFML will automatically scale this to fit the window
+    // SFML automatically scales this to fit the window
     view_ = sf::View(center, sf::Vector2f(width, height));
     
     RENDERER_DEBUG("  View: center=(" << view_.getCenter().x << ", " << view_.getCenter().y
