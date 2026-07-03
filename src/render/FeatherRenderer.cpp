@@ -4,6 +4,12 @@
 #include <cmath>
 #include <algorithm>
 
+// Debug output control - set to true to enable debug messages
+constexpr bool DEBUG_FEATHER_RENDERER = false;
+
+// Helper macro for debug output - no-op when DEBUG_FEATHER_RENDERER is false
+#define RENDERER_DEBUG(msg) do { if (DEBUG_FEATHER_RENDERER) { std::cout << msg << std::flush; } } while (0)
+
 // ─── build / config ──────────────────────────────────────────
 void FeatherRenderer::build(const CollatzCollection& col,
                             const RenderConfig& cfg,
@@ -11,8 +17,7 @@ void FeatherRenderer::build(const CollatzCollection& col,
 {
     collection_ = col;
     config_ = cfg;
-    std::cout << "FeatherRenderer::build: window=" << winSize.x << "x" << winSize.y << "\n";
-    std::cout.flush();
+    RENDERER_DEBUG("FeatherRenderer::build: window=" << winSize.x << "x" << winSize.y << "\n");
     // Pass the window centre: FeatherTree will recentre the bounding
     // box of the whole feather onto this point after computing geometry.
     tree_.build(col, cfg, windowCentre(winSize));
@@ -37,8 +42,7 @@ void FeatherRenderer::build(const CollatzCollection& col,
 void FeatherRenderer::applyConfig(const RenderConfig& cfg, sf::Vector2u winSize)
 {
     config_ = cfg;
-    std::cout << "FeatherRenderer::applyConfig: window=" << winSize.x << "x" << winSize.y << "\n";
-    std::cout.flush();
+    RENDERER_DEBUG("FeatherRenderer::applyConfig: window=" << winSize.x << "x" << winSize.y << "\n");
     tree_.recomputeGeometry(cfg, windowCentre(winSize));
     bfsOrder_  = tree_.getBFSOrder();
     maxWeight_ = tree_.maxWeight();
@@ -61,8 +65,7 @@ void FeatherRenderer::applyConfig(const RenderConfig& cfg, sf::Vector2u winSize)
 void FeatherRenderer::recolor(const RenderConfig& cfg)
 {
     config_ = cfg;
-    std::cout << "FeatherRenderer::recolor: keeping " << cursor_ << " shapes\n";
-    std::cout.flush();
+    RENDERER_DEBUG("FeatherRenderer::recolor: keeping " << cursor_ << " shapes\n");
     std::size_t prev = cursor_;
     shapes_.clear();
     
@@ -242,8 +245,7 @@ void FeatherRenderer::buildSequentialOrder()
         }
     }
     
-    std::cout << "Sequential order built with " << sequentialOrder_.size() << " nodes\n";
-    std::cout.flush();
+    RENDERER_DEBUG("Sequential order built with " << sequentialOrder_.size() << " nodes\n");
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -262,10 +264,9 @@ void FeatherRenderer::setAnimationMode(Command::AnimationMode mode, const Collat
     shapes_.clear();
     cursor_ = 0;
     
-    std::cout << "Animation mode set to: " 
-              << (mode == Command::AnimationMode::Parallel ? "Parallel" : "Sequential")
-              << "\n";
-    std::cout.flush();
+    RENDERER_DEBUG("Animation mode set to: " 
+                  << (mode == Command::AnimationMode::Parallel ? "Parallel" : "Sequential")
+                  << "\n");
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -293,13 +294,12 @@ void FeatherRenderer::setViewToFitTree(sf::Vector2u windowSize)
 {
     sf::FloatRect treeBounds = computeTreeBounds();
     
-    std::cout << "Tree bounds: (" << treeBounds.position.x << ", " << treeBounds.position.y 
-              << ") size=(" << treeBounds.size.x << ", " << treeBounds.size.y << ")\n";
-    std::cout.flush();
+    RENDERER_DEBUG("Tree bounds: (" << treeBounds.position.x << ", " << treeBounds.position.y 
+                  << ") size=(" << treeBounds.size.x << ", " << treeBounds.size.y << ")\n");
     
     if (treeBounds.size.x <= 0 || treeBounds.size.y <= 0) {
         // Empty tree or single point, use default view
-        std::cout << "  Empty tree bounds, using default view\n";
+        RENDERER_DEBUG("  Empty tree bounds, using default view\n");
         view_ = sf::View(sf::FloatRect({0, 0}, {static_cast<float>(windowSize.x), static_cast<float>(windowSize.y)}));
         return;
     }
@@ -319,9 +319,8 @@ void FeatherRenderer::setViewToFitTree(sf::Vector2u windowSize)
     // SFML will automatically scale this to fit the window
     view_ = sf::View(center, sf::Vector2f(width, height));
     
-    std::cout << "  View: center=(" << view_.getCenter().x << ", " << view_.getCenter().y
-              << ") size=(" << view_.getSize().x << ", " << view_.getSize().y << ")\n";
-    std::cout.flush();
+    RENDERER_DEBUG("  View: center=(" << view_.getCenter().x << ", " << view_.getCenter().y
+                  << ") size=(" << view_.getSize().x << ", " << view_.getSize().y << ")\n");
 }
 
 // ─────────────────────────────────────────────────────────────

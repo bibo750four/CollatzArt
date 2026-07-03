@@ -10,6 +10,12 @@
 // Safety limit for maximum number of nodes to prevent memory exhaustion
 constexpr std::size_t MAX_NODES = 1000000;
 
+// Debug output control - set to true to enable debug messages
+constexpr bool DEBUG_FEATHER_TREE = false;
+
+// Helper macro for debug output - no-op when DEBUG_FEATHER_TREE is false
+#define FEATHER_DEBUG(msg) do { if (DEBUG_FEATHER_TREE) { std::cout << msg << std::flush; } } while (0)
+
 void FeatherTree::insertSequence(const Sequence& seq, int64_t startVal) {
     if (seq.empty()) return;
 
@@ -48,8 +54,7 @@ void FeatherTree::build(const CollatzCollection& collection,
 
     // Root node: value 1, no parent
     nodes_.push_back(FeatherNode{ 1, -1, 0, 0.f, 0, {}, {}, 0 });
-    std::cout << "FeatherTree::build called with " << collection.size() << " sequences.\n";
-    std::cout.flush();
+    FEATHER_DEBUG("FeatherTree::build called with " << collection.size() << " sequences.\n");
 
     for (const auto& [startVal, seq] : collection) {
         insertSequence(seq, startVal);
@@ -61,8 +66,7 @@ void FeatherTree::build(const CollatzCollection& collection,
         }
     }
 
-    std::cout << "FeatherTree::build: " << nodes_.size() << " nodes created.\n";
-    std::cout.flush();
+    FEATHER_DEBUG("FeatherTree::build: " << nodes_.size() << " nodes created.\n");
 
     computeGeometry(cfg, origin);
 }
@@ -86,8 +90,7 @@ void FeatherTree::recomputeGeometry(const RenderConfig& cfg, sf::Vector2f origin
 // ─────────────────────────────────────────────────────────────
 void FeatherTree::computeGeometry(const RenderConfig& cfg, sf::Vector2f origin)
 {
-    std::cout << "computeGeometry called. origin: [" << origin.x << ", " << origin.y << "] (nodes: " << nodes_.size() << ")\n";
-    std::cout.flush();
+    FEATHER_DEBUG("computeGeometry called. origin: [" << origin.x << ", " << origin.y << "] (nodes: " << nodes_.size() << ")\n");
 
     const float pi          = std::numbers::pi_v<float>;
     const float evenThetaRad = cfg.evenAngle * pi / 180.f;
@@ -158,8 +161,7 @@ void FeatherTree::computeGeometry(const RenderConfig& cfg, sf::Vector2f origin)
     }
     float bbWidth = maxX - minX;
     float bbHeight = maxY - minY;
-    std::cout << "Bounding box: minX=" << minX << ", maxX=" << maxX << " (width=" << bbWidth << "), minY=" << minY << ", maxY=" << maxY << " (height=" << bbHeight << ")\n";
-    std::cout.flush();
+    FEATHER_DEBUG("Bounding box: minX=" << minX << ", maxX=" << maxX << " (width=" << bbWidth << "), minY=" << minY << ", maxY=" << maxY << " (height=" << bbHeight << ")\n");
 
     // Centre of the bounding box
     float bbCentreX = (minX + maxX) * 0.5f;
@@ -171,8 +173,7 @@ void FeatherTree::computeGeometry(const RenderConfig& cfg, sf::Vector2f origin)
     for (auto& n : nodes_)
         n.pos += offset;
 
-    std::cout << "Offset applied for centering: [" << offset.x << ", " << offset.y << "]\n";
-    std::cout.flush();
+    FEATHER_DEBUG("Offset applied for centering: [" << offset.x << ", " << offset.y << "]\n");
 }
 
 // ─────────────────────────────────────────────────────────────

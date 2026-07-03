@@ -62,6 +62,9 @@ void CLIView::run()
 {
     printMenu();
     std::string line;
+    // Maximum input line length to prevent memory exhaustion
+    constexpr std::size_t MAX_INPUT_LENGTH = 256;
+    
     while (!stop_.load()) {
         // Lock console I/O for reading input
         {
@@ -69,6 +72,11 @@ void CLIView::run()
             if (!std::getline(std::cin, line)) {
                 // EOF or error
                 break;
+            }
+            
+            // Truncate if line is too long
+            if (line.size() > MAX_INPUT_LENGTH) {
+                line = line.substr(0, MAX_INPUT_LENGTH);
             }
         }
         
