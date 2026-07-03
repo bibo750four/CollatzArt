@@ -45,6 +45,15 @@ static std::string segmentModeStr(Command::SegmentMode m)
     return m == Command::SegmentMode::Constant ? "constant" : "decreasing";
 }
 
+static std::string animationModeStr(Command::AnimationMode m)
+{
+    switch (m) {
+        case Command::AnimationMode::Parallel:    return "parallel";
+        case Command::AnimationMode::Sequential:  return "sequential";
+    }
+    return "";
+}
+
 // ─────────────────────────────────────────────
 CLIView::CLIView(CommandQueue<Command>& queue)
     : queue_(queue) {}
@@ -121,6 +130,7 @@ void CLIView::printMenu() const
         row(ss.str());
     }
 
+    row("Animation: " + animationModeStr(state_.animationMode));
     row("Color:  " + colorModeStr(state_.colorMode));
     row("Speed:  " + speedBar(state_.speed)
         + "  (" + std::to_string(state_.speed) + "/8)");
@@ -137,6 +147,7 @@ void CLIView::printMenu() const
     row("cf/cs/cp   \u2192 color fixed/sequence/parity");
     row("+  / -     \u2192 speed");
     row("f          \u2192 fullscreen");
+    row("m p / m s   \u2192 animation parallel/sequential");
     row("q          \u2192 quit");
 
     std::cout << "\u255A" << rep("\u2550", W - 2) << "\u255D\n";
@@ -233,6 +244,20 @@ bool CLIView::parseLine(const std::string& line)
         queue_.push({ Command::Type::SetSegmentMode, 0.f,
                       Command::ColorMode::Fixed, Command::SegmentMode::Decreasing });
         return true;
+    }
+
+    // --- animation mode ---
+    if (token == "m" && ss >> token) {
+        if (token == "p") {
+            state_.animationMode = Command::AnimationMode::Parallel;
+            queue_.push({ Command::Type::SetAnimationMode, 0.f, Command::ColorMode::Fixed, Command::SegmentMode::Constant, Command::AnimationMode::Parallel });
+            return true;
+        }
+        if (token == "s") {
+            state_.animationMode = Command::AnimationMode::Sequential;
+            queue_.push({ Command::Type::SetAnimationMode, 0.f, Command::ColorMode::Fixed, Command::SegmentMode::Constant, Command::AnimationMode::Sequential });
+            return true;
+        }
     }
 
     // --- color mode ---

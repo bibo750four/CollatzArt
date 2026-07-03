@@ -11,11 +11,12 @@ struct DisplayState
 {
     bool        playing     { false };
     float       angle       { 5.f };   // degrees
-    float       evenAngle   { 5.f };   // degrees
-    float       oddAngle    { 5.f };   // degrees
+    float       evenAngle   { 12.f };   // degrees
+    float       oddAngle    { 24.f };   // degrees
     float       segmentLen  { 1.f };
     Command::SegmentMode segmentMode { Command::SegmentMode::Constant };
     Command::ColorMode   colorMode   { Command::ColorMode::Fixed };
+    Command::AnimationMode animationMode { Command::AnimationMode::Parallel };
     int         speed       { 4 };      // 1..8
 };
 

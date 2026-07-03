@@ -1,13 +1,20 @@
 #include "AppController.hpp"
 #include <SFML/Window/VideoMode.hpp>
 #include <SFML/Window/Event.hpp>
+#include <iostream>
 
 AppController::AppController(CommandQueue<Command>& queue, CLIView& cliView)
     : commandQueue_(queue)
     , cliView_(cliView)
-    , window_(sf::VideoMode({ 1280u, 720u }), kTitle)
+    , window_(getInitialVideoMode(), kTitle)
 {
     window_.setFramerateLimit(kFPS);
+}
+
+sf::VideoMode AppController::getInitialVideoMode()
+{
+    // Use full desktop resolution
+    return sf::VideoMode::getDesktopMode();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -75,6 +82,8 @@ void AppController::applyCommand(const Command& cmd,
 
         case Command::Type::SetAngle:
             config_.angle = cmd.floatVal;
+            config_.evenAngle = cmd.floatVal;
+            config_.oddAngle = cmd.floatVal;
             renderer_.applyConfig(config_, window_.getSize());
             playback_.reset();
             playback_.play();
@@ -115,6 +124,12 @@ void AppController::applyCommand(const Command& cmd,
             renderer_.recolor(config_);   // recolor only, do not reset animation
             break;
 
+        case Command::Type::SetAnimationMode:
+            renderer_.setAnimationMode(cmd.animationMode, collection);
+            playback_.reset();
+            playback_.play();
+            break;
+
         case Command::Type::ToggleFullscreen:
             toggleFullscreen(collection);
             break;
@@ -133,7 +148,7 @@ void AppController::toggleFullscreen(const CollatzCollection& collection)
         window_.create(sf::VideoMode::getFullscreenModes()[0],
                        kTitle, sf::State::Fullscreen);
     else
-        window_.create(sf::VideoMode({ 1280u, 720u }), kTitle);
+        window_.create(getInitialVideoMode(), kTitle);
 
     window_.setFramerateLimit(kFPS);
     rebuild(collection);

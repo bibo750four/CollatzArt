@@ -29,6 +29,7 @@ public:
     const std::vector<FeatherNode>& nodes() const { return nodes_; }
     std::vector<int>                getBFSOrder()  const;
     int                             maxWeight()    const;
+    int                             getLeafNodeForStartValue(int64_t startVal) const;
 
 private:
     struct PairHash {
@@ -50,4 +51,5 @@ private:
 
     std::vector<FeatherNode>                                   nodes_;
     std::unordered_map<std::pair<int,int64_t>, int, PairHash>  lookup_;
+    std::unordered_map<int64_t, int>                           startValToLeafIdx_;  // Maps starting value to leaf node index
 };

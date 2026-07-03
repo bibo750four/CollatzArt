@@ -1,4 +1,5 @@
 #include "FeatherRenderer.hpp"
+#include <iostream>
 #include <numbers>
 #include <cmath>
 #include <algorithm>
@@ -8,48 +9,88 @@ void FeatherRenderer::build(const CollatzCollection& col,
                             const RenderConfig& cfg,
                             sf::Vector2u winSize)
 {
+    collection_ = col;
     config_ = cfg;
+    std::cout << "FeatherRenderer::build: window=" << winSize.x << "x" << winSize.y << "\n";
+    std::cout.flush();
     // Pass the window centre: FeatherTree will recentre the bounding
     // box of the whole feather onto this point after computing geometry.
     tree_.build(col, cfg, windowCentre(winSize));
     bfsOrder_  = tree_.getBFSOrder();
     maxWeight_ = tree_.maxWeight();
     shapes_.clear();
-    shapes_.reserve(bfsOrder_.size());
     cursor_ = 0;
+    
+    // Build sequential order if needed
+    if (animationMode_ == Command::AnimationMode::Sequential) {
+        buildSequentialOrder();
+    }
+    
+    // Reserve space for shapes (use appropriate order size)
+    const std::vector<int>& order = (animationMode_ == Command::AnimationMode::Sequential) ? sequentialOrder_ : bfsOrder_;
+    shapes_.reserve(order.size());
+    
+    // Set up view to ensure tree fits in window
+    setViewToFitTree(winSize);
 }
 
 void FeatherRenderer::applyConfig(const RenderConfig& cfg, sf::Vector2u winSize)
 {
     config_ = cfg;
+    std::cout << "FeatherRenderer::applyConfig: window=" << winSize.x << "x" << winSize.y << "\n";
+    std::cout.flush();
     tree_.recomputeGeometry(cfg, windowCentre(winSize));
     bfsOrder_  = tree_.getBFSOrder();
     maxWeight_ = tree_.maxWeight();
     shapes_.clear();
     cursor_ = 0;
+    
+    // Rebuild sequential order if in sequential mode
+    if (animationMode_ == Command::AnimationMode::Sequential) {
+        buildSequentialOrder();
+    }
+    
+    // Reserve space for shapes (use appropriate order size)
+    const std::vector<int>& order = (animationMode_ == Command::AnimationMode::Sequential) ? sequentialOrder_ : bfsOrder_;
+    shapes_.reserve(order.size());
+    
+    // Update view to fit the recomputed tree
+    setViewToFitTree(winSize);
 }
 
 void FeatherRenderer::recolor(const RenderConfig& cfg)
 {
     config_ = cfg;
+    std::cout << "FeatherRenderer::recolor: keeping " << cursor_ << " shapes\n";
+    std::cout.flush();
     std::size_t prev = cursor_;
     shapes_.clear();
-    cursor_ = 0;
-    for (std::size_t i = 0; i < prev; ++i) addShape(i);
+    
+    // Use the appropriate order based on animation mode
+    const std::vector<int>& order = (animationMode_ == Command::AnimationMode::Sequential) ? sequentialOrder_ : bfsOrder_;
+    for (std::size_t i = 0; i < prev && i < order.size(); ++i) {
+        addShape(i, order);
+    }
+    // cursor_ remains unchanged, preserving animation progress
 }
 
 // ─── animation ───────────────────────────────────────────────
 void FeatherRenderer::update(int steps)
 {
-    for (int i = 0; i < steps && cursor_ < bfsOrder_.size(); ++i, ++cursor_)
-        addShape(cursor_);
+    const std::vector<int>& order = (animationMode_ == Command::AnimationMode::Sequential) ? sequentialOrder_ : bfsOrder_;
+    for (int i = 0; i < steps && cursor_ < order.size(); ++i, ++cursor_)
+        addShape(cursor_, order);
 }
 
-void FeatherRenderer::addShape(std::size_t bfsIndex)
+void FeatherRenderer::addShape(std::size_t orderIndex, const std::vector<int>& order)
 {
     const auto& nodes  = tree_.nodes();
-    int         idx    = bfsOrder_[bfsIndex];
+    int         idx    = order[orderIndex];
     const auto& node   = nodes[idx];
+
+    // Skip root node (no parent to draw from)
+    if (node.parentIdx == -1) return;
+
     const auto& parent = nodes[node.parentIdx];
 
     float t = (maxWeight_ > 1)
@@ -63,11 +104,21 @@ void FeatherRenderer::addShape(std::size_t bfsIndex)
 // ─── draw / state ─────────────────────────────────────────────
 void FeatherRenderer::draw(sf::RenderWindow& window) const
 {
+    // Save the window's current view and set our custom view
+    sf::View oldView = window.getView();
+    window.setView(view_);
+    
     for (const auto& shape : shapes_) window.draw(shape);
+    
+    // Restore the window's view
+    window.setView(oldView);
 }
 
 void FeatherRenderer::reset()  { shapes_.clear(); cursor_ = 0; }
-bool FeatherRenderer::isDone() const { return cursor_ >= bfsOrder_.size(); }
+bool FeatherRenderer::isDone() const { 
+    const std::vector<int>& order = (animationMode_ == Command::AnimationMode::Sequential) ? sequentialOrder_ : bfsOrder_;
+    return cursor_ >= order.size(); 
+}
 
 // ─── helpers ──────────────────────────────────────────────────
 sf::Color FeatherRenderer::nodeColor(const FeatherNode& node) const
@@ -103,6 +154,140 @@ sf::RectangleShape FeatherRenderer::makeThickLine(
     return shape;
 }
 
+// ─────────────────────────────────────────────────────────────
+void FeatherRenderer::buildSequentialOrder()
+{
+    // Build a sequential animation order: complete sequences from highest to lowest starting number
+    sequentialOrder_.clear();
+    
+    // Collect all starting numbers from the collection, sorted in descending order
+    std::vector<int64_t> startingNumbers;
+    for (const auto& [startVal, seq] : collection_) {
+        startingNumbers.push_back(startVal);
+    }
+    
+    // Sort in descending order (highest first)
+    std::sort(startingNumbers.begin(), startingNumbers.end(), std::greater<>());
+    
+    // For each starting number, find all nodes that belong to its sequence
+    // and add them to the order in root-to-leaf order (so segments connect properly)
+    const auto& nodes = tree_.nodes();
+    
+    for (int64_t startVal : startingNumbers) {
+        // Get the leaf node for this starting value directly from the tree
+        int leafIdx = tree_.getLeafNodeForStartValue(startVal);
+        
+        if (leafIdx == -1) continue;  // Shouldn't happen - all startVals should have a leaf
+        
+        // Walk up the tree from leaf to root, collecting node indices
+        std::vector<int> sequencePath;
+        int temp = leafIdx;
+        while (temp != -1) {
+            sequencePath.push_back(temp);
+            temp = nodes[temp].parentIdx;
+        }
+        
+        // Reverse to get root-to-leaf order
+        // This ensures that when we animate, parent nodes are added before children
+        std::reverse(sequencePath.begin(), sequencePath.end());
+        
+        // Add nodes in root-to-leaf order, but skip the root node
+        // (the root has no parent, so there's no line to draw for it)
+        // This animates each sequence from 1 up to the starting number completely
+        // (which visually appears as each sequence growing from the center)
+        // Note: We do NOT deduplicate here - each sequence should have its full path
+        // drawn, even if nodes are shared with other sequences
+        for (int idx : sequencePath) {
+            if (idx != 0) {  // Skip root node (index 0)
+                sequentialOrder_.push_back(idx);
+            }
+        }
+    }
+    
+    std::cout << "Sequential order built with " << sequentialOrder_.size() << " nodes\n";
+    std::cout.flush();
+}
+
+// ─────────────────────────────────────────────────────────────
+void FeatherRenderer::setAnimationMode(Command::AnimationMode mode, const CollatzCollection& collection)
+{
+    if (animationMode_ == mode) return;
+    
+    animationMode_ = mode;
+    collection_ = collection;
+    
+    if (mode == Command::AnimationMode::Sequential) {
+        buildSequentialOrder();
+    }
+    
+    // Reset animation to start fresh with new mode
+    shapes_.clear();
+    cursor_ = 0;
+    
+    std::cout << "Animation mode set to: " 
+              << (mode == Command::AnimationMode::Parallel ? "Parallel" : "Sequential")
+              << "\n";
+    std::cout.flush();
+}
+
+// ─────────────────────────────────────────────────────────────
+sf::FloatRect FeatherRenderer::computeTreeBounds() const
+{
+    const auto& nodes = tree_.nodes();
+    if (nodes.empty()) return sf::FloatRect();
+    
+    float minX = nodes[0].pos.x;
+    float maxX = nodes[0].pos.x;
+    float minY = nodes[0].pos.y;
+    float maxY = nodes[0].pos.y;
+    
+    for (const auto& node : nodes) {
+        if (node.pos.x < minX) minX = node.pos.x;
+        if (node.pos.x > maxX) maxX = node.pos.x;
+        if (node.pos.y < minY) minY = node.pos.y;
+        if (node.pos.y > maxY) maxY = node.pos.y;
+    }
+    
+    return sf::FloatRect({minX, minY}, {maxX - minX, maxY - minY});
+}
+
+void FeatherRenderer::setViewToFitTree(sf::Vector2u windowSize)
+{
+    sf::FloatRect treeBounds = computeTreeBounds();
+    
+    std::cout << "Tree bounds: (" << treeBounds.position.x << ", " << treeBounds.position.y 
+              << ") size=(" << treeBounds.size.x << ", " << treeBounds.size.y << ")\n";
+    std::cout.flush();
+    
+    if (treeBounds.size.x <= 0 || treeBounds.size.y <= 0) {
+        // Empty tree or single point, use default view
+        std::cout << "  Empty tree bounds, using default view\n";
+        view_ = sf::View(sf::FloatRect({0, 0}, {static_cast<float>(windowSize.x), static_cast<float>(windowSize.y)}));
+        return;
+    }
+    
+    // Add margin around the tree (10% on each side = 20% total)
+    const float marginFactor = 1.2f;  // 10% margin on each side
+    float width = treeBounds.size.x * marginFactor;
+    float height = treeBounds.size.y * marginFactor;
+    
+    // Center of the tree
+    sf::Vector2f center(
+        treeBounds.position.x + treeBounds.size.x * 0.5f,
+        treeBounds.position.y + treeBounds.size.y * 0.5f
+    );
+    
+    // Create view that always shows the entire tree with margin
+    // SFML will automatically scale this to fit the window
+    view_ = sf::View(center, sf::Vector2f(width, height));
+    
+    std::cout << "  View: center=(" << view_.getCenter().x << ", " << view_.getCenter().y
+              << ") size=(" << view_.getSize().x << ", " << view_.getSize().y << ")\n";
+    std::cout.flush();
+}
+
+// ─────────────────────────────────────────────────────────────
+
 sf::Color FeatherRenderer::hsvToColor(float h, float s, float v)
 {
     float c = v * s;
@@ -121,3 +306,5 @@ sf::Color FeatherRenderer::hsvToColor(float h, float s, float v)
         static_cast<uint8_t>((b + m) * 255.f)
     };
 }
+
+

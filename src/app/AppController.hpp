@@ -12,6 +12,7 @@ public:
     void run(const CollatzCollection& collection, const RenderConfig& initialConfig);
 
 private:
+    sf::VideoMode getInitialVideoMode();
     /**
      * Applies a given command to the current application state.
      * Handles commands including playback control, toggling fullscreen,

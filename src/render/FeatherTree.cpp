@@ -30,6 +30,9 @@ void FeatherTree::insertSequence(const Sequence& seq, int64_t startVal) {
             currentIdx = found->second;
         }
     }
+    
+    // Store the leaf node index for this starting value
+    startValToLeafIdx_[startVal] = currentIdx;
 }
 
 void FeatherTree::build(const CollatzCollection& collection,
@@ -38,13 +41,18 @@ void FeatherTree::build(const CollatzCollection& collection,
 {
     nodes_.clear();
     lookup_.clear();
+    startValToLeafIdx_.clear();
 
     // Root node: value 1, no parent
     nodes_.push_back(FeatherNode{ 1, -1, 0, 0.f, 0, {}, {}, 0 });
     std::cout << "FeatherTree::build called with " << collection.size() << " sequences.\n";
+    std::cout.flush();
 
     for (const auto& [startVal, seq] : collection)
         insertSequence(seq, startVal);
+
+    std::cout << "FeatherTree::build: " << nodes_.size() << " nodes created.\n";
+    std::cout.flush();
 
     computeGeometry(cfg, origin);
 }
@@ -68,7 +76,8 @@ void FeatherTree::recomputeGeometry(const RenderConfig& cfg, sf::Vector2f origin
 // ─────────────────────────────────────────────────────────────
 void FeatherTree::computeGeometry(const RenderConfig& cfg, sf::Vector2f origin)
 {
-    std::cout << "computeGeometry called. origin: [" << origin.x << ", " << origin.y << "]\n";
+    std::cout << "computeGeometry called. origin: [" << origin.x << ", " << origin.y << "] (nodes: " << nodes_.size() << ")\n";
+    std::cout.flush();
 
     const float pi          = std::numbers::pi_v<float>;
     const float evenThetaRad = cfg.evenAngle * pi / 180.f;
@@ -137,7 +146,10 @@ void FeatherTree::computeGeometry(const RenderConfig& cfg, sf::Vector2f origin)
         if (n.pos.y < minY) minY = n.pos.y;
         if (n.pos.y > maxY) maxY = n.pos.y;
     }
-    std::cout << "Bounding box: minX=" << minX << ", maxX=" << maxX << ", minY=" << minY << ", maxY=" << maxY << "\n";
+    float bbWidth = maxX - minX;
+    float bbHeight = maxY - minY;
+    std::cout << "Bounding box: minX=" << minX << ", maxX=" << maxX << " (width=" << bbWidth << "), minY=" << minY << ", maxY=" << maxY << " (height=" << bbHeight << ")\n";
+    std::cout.flush();
 
     // Centre of the bounding box
     float bbCentreX = (minX + maxX) * 0.5f;
@@ -150,6 +162,7 @@ void FeatherTree::computeGeometry(const RenderConfig& cfg, sf::Vector2f origin)
         n.pos += offset;
 
     std::cout << "Offset applied for centering: [" << offset.x << ", " << offset.y << "]\n";
+    std::cout.flush();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -167,6 +180,15 @@ std::vector<int> FeatherTree::getBFSOrder() const
         for (int c : nodes_[idx].childIndices) q.push(c);
     }
     return order;
+}
+
+int FeatherTree::getLeafNodeForStartValue(int64_t startVal) const
+{
+    auto it = startValToLeafIdx_.find(startVal);
+    if (it != startValToLeafIdx_.end()) {
+        return it->second;
+    }
+    return -1;  // Not found
 }
 
 int FeatherTree::maxWeight() const
