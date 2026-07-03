@@ -85,11 +85,28 @@ void FeatherRenderer::update(int steps)
 void FeatherRenderer::addShape(std::size_t orderIndex, const std::vector<int>& order)
 {
     const auto& nodes  = tree_.nodes();
-    int         idx    = order[orderIndex];
-    const auto& node   = nodes[idx];
+    
+    // Bounds checking for order index
+    if (orderIndex >= order.size()) {
+        return;
+    }
+    
+    int idx = order[orderIndex];
+    
+    // Bounds checking for node index
+    if (idx < 0 || static_cast<std::size_t>(idx) >= nodes.size()) {
+        return;
+    }
+    
+    const auto& node = nodes[idx];
 
     // Skip root node (no parent to draw from)
     if (node.parentIdx == -1) return;
+
+    // Bounds checking for parent index
+    if (node.parentIdx < 0 || static_cast<std::size_t>(node.parentIdx) >= nodes.size()) {
+        return;
+    }
 
     const auto& parent = nodes[node.parentIdx];
 
@@ -155,6 +172,9 @@ sf::RectangleShape FeatherRenderer::makeThickLine(
 }
 
 // ─────────────────────────────────────────────────────────────
+// Maximum size for sequential order to prevent memory exhaustion
+constexpr std::size_t MAX_SEQUENTIAL_ORDER = 500000;
+
 void FeatherRenderer::buildSequentialOrder()
 {
     // Build a sequential animation order: complete sequences from highest to lowest starting number
@@ -174,6 +194,13 @@ void FeatherRenderer::buildSequentialOrder()
     const auto& nodes = tree_.nodes();
     
     for (int64_t startVal : startingNumbers) {
+        // Safety check: prevent unbounded growth
+        if (sequentialOrder_.size() >= MAX_SEQUENTIAL_ORDER) {
+            std::cerr << "Warning: Sequential order reached maximum size (" 
+                      << MAX_SEQUENTIAL_ORDER << "). Truncating.\n";
+            break;
+        }
+        
         // Get the leaf node for this starting value directly from the tree
         int leafIdx = tree_.getLeafNodeForStartValue(startVal);
         
@@ -200,7 +227,18 @@ void FeatherRenderer::buildSequentialOrder()
         for (int idx : sequencePath) {
             if (idx != 0) {  // Skip root node (index 0)
                 sequentialOrder_.push_back(idx);
+                
+                // Safety check during building
+                if (sequentialOrder_.size() >= MAX_SEQUENTIAL_ORDER) {
+                    std::cerr << "Warning: Sequential order reached maximum size (" 
+                              << MAX_SEQUENTIAL_ORDER << "). Truncating.\n";
+                    break;
+                }
             }
+        }
+        
+        if (sequentialOrder_.size() >= MAX_SEQUENTIAL_ORDER) {
+            break;
         }
     }
     

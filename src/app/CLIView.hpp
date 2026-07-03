@@ -3,6 +3,7 @@
 #include "CommandQueue.hpp"
 #include <string>
 #include <atomic>
+#include <mutex>
 
 // Snapshot of the current renderer state shown in the CLI menu.
 // CLIView keeps a local copy that it updates whenever it sends a command,
@@ -18,6 +19,27 @@ struct DisplayState
     Command::ColorMode   colorMode   { Command::ColorMode::Fixed };
     Command::AnimationMode animationMode { Command::AnimationMode::Parallel };
     int         speed       { 4 };      // 1..8
+};
+
+// Global mutex for thread-safe console I/O
+// Used by both CLI thread and main thread to prevent race conditions on std::cin/std::cout
+class ConsoleMutex {
+public:
+    static std::mutex& get() {
+        static std::mutex instance;
+        return instance;
+    }
+    
+    // RAII lock for console I/O
+    class Lock {
+    public:
+        Lock() : mutex_(get()) { mutex_.lock(); }
+        ~Lock() { mutex_.unlock(); }
+        Lock(const Lock&) = delete;
+        Lock& operator=(const Lock&) = delete;
+    private:
+        std::mutex& mutex_;
+    };
 };
 
 class CLIView

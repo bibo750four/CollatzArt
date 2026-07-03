@@ -86,7 +86,11 @@ int main()
     CLIView               cli(queue);
     AppController         app(queue, cli);
 
-    std::cin.ignore(); // consume the newline before the CLI thread starts
+    // Thread-safe: consume the newline before the CLI thread starts
+    {
+        ConsoleMutex::Lock lock;
+        std::cin.ignore();
+    }
 
     std::thread cliThread([&cli]() { cli.run(); });
 

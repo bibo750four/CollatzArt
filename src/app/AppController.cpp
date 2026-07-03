@@ -22,7 +22,12 @@ void AppController::run(const CollatzCollection& collection,
                         const RenderConfig&      initialConfig)
 {
     config_ = initialConfig;
-    rebuild(collection);      // initial build
+    try {
+        rebuild(collection);      // initial build
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to initialize renderer: " << e.what() << "\n";
+        throw;
+    }
     playback_.play();
 
     sf::Clock clock;
@@ -84,54 +89,86 @@ void AppController::applyCommand(const Command& cmd,
             config_.angle = cmd.floatVal;
             config_.evenAngle = cmd.floatVal;
             config_.oddAngle = cmd.floatVal;
-            renderer_.applyConfig(config_, window_.getSize());
-            playback_.reset();
-            playback_.play();
+            try {
+                renderer_.applyConfig(config_, window_.getSize());
+                playback_.reset();
+                playback_.play();
+            } catch (const std::exception& e) {
+                std::cerr << "Error applying config: " << e.what() << "\n";
+            }
             break;
 
         // Handle setting the even angle
         case Command::Type::SetEvenAngle:
             config_.evenAngle = cmd.floatVal;
-            renderer_.applyConfig(config_, window_.getSize());
-            playback_.reset();
-            playback_.play();
+            try {
+                renderer_.applyConfig(config_, window_.getSize());
+                playback_.reset();
+                playback_.play();
+            } catch (const std::exception& e) {
+                std::cerr << "Error applying config: " << e.what() << "\n";
+            }
             break;
 
         // Handle setting the odd angle
         case Command::Type::SetOddAngle:
             config_.oddAngle = cmd.floatVal;
-            renderer_.applyConfig(config_, window_.getSize());
-            playback_.reset();
-            playback_.play();
+            try {
+                renderer_.applyConfig(config_, window_.getSize());
+                playback_.reset();
+                playback_.play();
+            } catch (const std::exception& e) {
+                std::cerr << "Error applying config: " << e.what() << "\n";
+            }
             break;
 
         case Command::Type::SetSegmentLen:
             config_.segmentLen = cmd.floatVal;
-            renderer_.applyConfig(config_, window_.getSize());
-            playback_.reset();
-            playback_.play();
+            try {
+                renderer_.applyConfig(config_, window_.getSize());
+                playback_.reset();
+                playback_.play();
+            } catch (const std::exception& e) {
+                std::cerr << "Error applying config: " << e.what() << "\n";
+            }
             break;
 
         case Command::Type::SetSegmentMode:
             config_.segmentMode = cmd.segmentMode;
-            renderer_.applyConfig(config_, window_.getSize());
-            playback_.reset();
-            playback_.play();
+            try {
+                renderer_.applyConfig(config_, window_.getSize());
+                playback_.reset();
+                playback_.play();
+            } catch (const std::exception& e) {
+                std::cerr << "Error applying config: " << e.what() << "\n";
+            }
             break;
 
         case Command::Type::SetColorMode:
             config_.colorMode = cmd.colorMode;
-            renderer_.recolor(config_);   // recolor only, do not reset animation
+            try {
+                renderer_.recolor(config_);   // recolor only, do not reset animation
+            } catch (const std::exception& e) {
+                std::cerr << "Error recoloring: " << e.what() << "\n";
+            }
             break;
 
         case Command::Type::SetAnimationMode:
-            renderer_.setAnimationMode(cmd.animationMode, collection);
-            playback_.reset();
-            playback_.play();
+            try {
+                renderer_.setAnimationMode(cmd.animationMode, collection);
+                playback_.reset();
+                playback_.play();
+            } catch (const std::exception& e) {
+                std::cerr << "Error setting animation mode: " << e.what() << "\n";
+            }
             break;
 
         case Command::Type::ToggleFullscreen:
-            toggleFullscreen(collection);
+            try {
+                toggleFullscreen(collection);
+            } catch (const std::exception& e) {
+                std::cerr << "Error toggling fullscreen: " << e.what() << "\n";
+            }
             break;
 
         case Command::Type::Quit:
@@ -144,11 +181,18 @@ void AppController::applyCommand(const Command& cmd,
 void AppController::toggleFullscreen(const CollatzCollection& collection)
 {
     isFullscreen_ = !isFullscreen_;
-    if (isFullscreen_)
-        window_.create(sf::VideoMode::getFullscreenModes()[0],
-                       kTitle, sf::State::Fullscreen);
-    else
+    if (isFullscreen_) {
+        auto modes = sf::VideoMode::getFullscreenModes();
+        if (modes.empty()) {
+            std::cerr << "No fullscreen modes available. Using windowed mode.\n";
+            // Fallback to windowed mode
+            window_.create(getInitialVideoMode(), kTitle);
+        } else {
+            window_.create(modes[0], kTitle, sf::State::Fullscreen);
+        }
+    } else {
         window_.create(getInitialVideoMode(), kTitle);
+    }
 
     window_.setFramerateLimit(kFPS);
     rebuild(collection);
@@ -158,6 +202,11 @@ void AppController::toggleFullscreen(const CollatzCollection& collection)
 
 void AppController::rebuild(const CollatzCollection& collection)
 {
-    renderer_.build(collection, config_, window_.getSize());
+    try {
+        renderer_.build(collection, config_, window_.getSize());
+    } catch (const std::exception& e) {
+        std::cerr << "Error rebuilding renderer: " << e.what() << "\n";
+        throw; // Re-throw to be handled by caller
+    }
 }
 

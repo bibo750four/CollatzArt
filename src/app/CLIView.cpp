@@ -62,8 +62,16 @@ void CLIView::run()
 {
     printMenu();
     std::string line;
-    while (!stop_.load() && std::getline(std::cin, line))
-    {
+    while (!stop_.load()) {
+        // Lock console I/O for reading input
+        {
+            ConsoleMutex::Lock lock;
+            if (!std::getline(std::cin, line)) {
+                // EOF or error
+                break;
+            }
+        }
+        
         if (!parseLine(line)) break;
         printMenu();
     }
@@ -75,6 +83,7 @@ void CLIView::run()
 
 void CLIView::printMenu() const
 {
+    ConsoleMutex::Lock lock; // Thread-safe console output
     clearScreen();
 
     const int W = 46;
