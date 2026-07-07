@@ -12,5 +12,6 @@ struct RenderConfig {
     Command::SegmentMode segmentMode{ Command::SegmentMode::Constant };
     Command::ColorMode   colorMode  { Command::ColorMode::Fixed };
     sf::Color            fixedColor { sf::Color::Black };
+    sf::Color            backgroundColor { sf::Color::White };  // Background color of the render window
     int                  speed      { 4 };       // 1..8
 };

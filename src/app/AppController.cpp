@@ -6,9 +6,11 @@
 AppController::AppController(CommandQueue<Command>& queue, CLIView& cliView)
     : commandQueue_(queue)
     , cliView_(cliView)
-    , window_(getInitialVideoMode(), kTitle)
+    , window_(sf::VideoMode(getInitialVideoMode()), kTitle, sf::State::Windowed, sf::ContextSettings(0, 0, 8))
 {
     window_.setFramerateLimit(kFPS);
+    // Enable vertical sync to reduce tearing and improve smoothness
+    window_.setVerticalSyncEnabled(true);
 }
 
 sf::VideoMode AppController::getInitialVideoMode()
@@ -55,7 +57,7 @@ void AppController::run(const CollatzCollection& collection,
         }
 
         // 4 — render
-        window_.clear(sf::Color::White);
+        window_.clear(config_.backgroundColor);
         renderer_.draw(window_);
         window_.display();
     }
@@ -169,6 +171,15 @@ void AppController::applyCommand(const Command& cmd,
             } catch (const std::exception& e) {
                 std::cerr << "Error toggling fullscreen: " << e.what() << "\n";
             }
+            break;
+
+        case Command::Type::SetRenderColor:
+            config_.fixedColor = cmd.color;
+            renderer_.recolor(config_);
+            break;
+
+        case Command::Type::SetBackgroundColor:
+            config_.backgroundColor = cmd.color;
             break;
 
         case Command::Type::Quit:

@@ -164,11 +164,67 @@ void CLIView::printMenu() const
     row("cf/cs/cp   \u2192 color fixed/sequence/parity");
     row("+  / -     \u2192 speed");
     row("f          \u2192 fullscreen");
+    row("cr         → change render color");
+    row("cb         → change background color");
     row("m p / m s   \u2192 animation parallel/sequential");
     row("q          \u2192 quit");
 
     std::cout << "\u255A" << rep("\u2550", W - 2) << "\u255D\n";
     std::cout << "> " << std::flush;
+}
+
+// ─────────────────────────────────────────────────────────────
+void CLIView::handleRenderColorCommand()
+{
+    sf::Color color = selectColor();
+    queue_.push({ Command::Type::SetRenderColor, 0.f, Command::ColorMode::Fixed, Command::SegmentMode::Constant, Command::AnimationMode::Parallel, color });
+}
+
+void CLIView::handleBackgroundColorCommand()
+{
+    sf::Color color = selectColor();
+    queue_.push({ Command::Type::SetBackgroundColor, 0.f, Command::ColorMode::Fixed, Command::SegmentMode::Constant, Command::AnimationMode::Parallel, color });
+}
+
+sf::Color CLIView::selectColor()
+{
+    ConsoleMutex::Lock lock;
+    std::cout << "\nSelect a color:\n";
+    std::cout << "  1. Black\n";
+    std::cout << "  2. White\n";
+    std::cout << "  3. Red\n";
+    std::cout << "  4. Green\n";
+    std::cout << "  5. Blue\n";
+    std::cout << "  6. Yellow\n";
+    std::cout << "  7. Magenta\n";
+    std::cout << "  8. Cyan\n";
+    std::cout << "  9. Custom RGB\n";
+    std::cout << "Enter choice (1-9): ";
+
+    int choice;
+    std::cin >> choice;
+    std::cin.ignore(); // Clear newline
+
+    switch (choice) {
+        case 1:  return sf::Color::Black;
+        case 2:  return sf::Color::White;
+        case 3:  return sf::Color::Red;
+        case 4:  return sf::Color::Green;
+        case 5:  return sf::Color::Blue;
+        case 6:  return sf::Color::Yellow;
+        case 7:  return sf::Color::Magenta;
+        case 8:  return sf::Color::Cyan;
+        case 9: {
+            int r, g, b;
+            std::cout << "Enter RGB values (0-255) separated by spaces (e.g., '255 100 50'): ";
+            std::cin >> r >> g >> b;
+            std::cin.ignore(); // Clear newline
+            return sf::Color(static_cast<unsigned char>(r), static_cast<unsigned char>(g), static_cast<unsigned char>(b));
+        }
+        default:
+            std::cout << "Invalid choice. Using Black.\n";
+            return sf::Color::Black;
+    }
 }
 
 
@@ -291,6 +347,18 @@ bool CLIView::parseLine(const std::string& line)
     if (token == "cp") {
         state_.colorMode = Command::ColorMode::PerParity;
         queue_.push({ Command::Type::SetColorMode, 0.f, Command::ColorMode::PerParity });
+        return true;
+    }
+
+    // --- render color ---
+    if (token == "cr") {
+        handleRenderColorCommand();
+        return true;
+    }
+
+    // --- background color ---
+    if (token == "cb") {
+        handleBackgroundColorCommand();
         return true;
     }
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "Command.hpp"
 #include "CommandQueue.hpp"
+#include <SFML/Graphics/Color.hpp>
 #include <string>
 #include <atomic>
 #include <mutex>
@@ -58,6 +59,9 @@ public:
 private:
     void printMenu() const;
     bool parseLine(const std::string& line);  // true → keep running, false → quit
+    void handleRenderColorCommand();
+    void handleBackgroundColorCommand();
+    sf::Color selectColor();
 
     CommandQueue<Command>& queue_;
     DisplayState           state_;

@@ -1,4 +1,5 @@
 #pragma once
+#include <SFML/Graphics/Color.hpp>
 
 struct Command
 {
@@ -12,6 +13,8 @@ struct Command
         SetSegmentMode, // payload: segmentMode
         SetColorMode,   // payload: colorMode
         SetAnimationMode, // payload: animationMode
+        SetRenderColor, // payload: color (sf::Color)
+        SetBackgroundColor, // payload: color (sf::Color)
         ToggleFullscreen,
         Quit
     };
@@ -25,4 +28,5 @@ struct Command
     ColorMode       colorMode   { ColorMode::Fixed };
     SegmentMode     segmentMode { SegmentMode::Constant };
     AnimationMode   animationMode { AnimationMode::Parallel };
+    sf::Color        color { sf::Color::Black };  // Used for SetRenderColor and SetBackgroundColor
 };
