@@ -61,6 +61,7 @@ private:
     bool parseLine(const std::string& line);  // true → keep running, false → quit
     void handleRenderColorCommand();
     void handleBackgroundColorCommand();
+    void handleBatchCommand(const std::vector<std::string>& tokens);
     sf::Color selectColor();
 
     CommandQueue<Command>& queue_;

@@ -1,6 +1,9 @@
 #include "AppController.hpp"
 #include <SFML/Window/VideoMode.hpp>
 #include <SFML/Window/Event.hpp>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
 #include <iostream>
 
 AppController::AppController(CommandQueue<Command>& queue, CLIView& cliView)
@@ -182,6 +185,10 @@ void AppController::applyCommand(const Command& cmd,
             config_.backgroundColor = cmd.color;
             break;
 
+        case Command::Type::BatchMode:
+            runBatchMode(cmd.stringVal);
+            break;
+
         case Command::Type::Quit:
             window_.close();
             break;
@@ -218,6 +225,170 @@ void AppController::rebuild(const CollatzCollection& collection)
     } catch (const std::exception& e) {
         std::cerr << "Error rebuilding renderer: " << e.what() << "\n";
         throw; // Re-throw to be handled by caller
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+std::vector<RenderJob> AppController::parseJobFile(const std::string& jobFile)
+{
+    std::vector<RenderJob> jobs;
+    std::ifstream file(jobFile);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open job file: " + jobFile);
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        // Skip empty lines and comments
+        line.erase(0, line.find_first_not_of(" \t"));
+        line.erase(line.find_last_not_of(" \t") + 1);
+        if (line.empty() || line[0] == '#') {
+            continue;
+        }
+
+        RenderJob job;
+        std::istringstream iss(line);
+        std::string token;
+        bool hasRange = false;
+        bool hasStep = false;
+
+        while (std::getline(iss, token, ' ')) {
+            size_t delimiterPos = token.find('=');
+            if (delimiterPos == std::string::npos) {
+                std::cerr << "Warning: Invalid token in job file: '" << token << "'. Skipping.\n";
+                continue;
+            }
+
+            std::string key = token.substr(0, delimiterPos);
+            std::string value = token.substr(delimiterPos + 1);
+
+            try {
+                if (key == "range") {
+                    job.range = std::stoll(value);
+                    hasRange = true;
+                } else if (key == "step") {
+                    job.step = std::stoll(value);
+                    hasStep = true;
+                } else if (key == "evenAngle") {
+                    job.evenAngle = std::stof(value);
+                } else if (key == "oddAngle") {
+                    job.oddAngle = std::stof(value);
+                } else if (key == "color") {
+                    job.color = parseColor(value);
+                } else if (key == "background") {
+                    job.background = parseColor(value);
+                } else if (key == "speed") {
+                    job.speed = std::stoi(value);
+                    job.speed = std::clamp(job.speed, 1, 8);
+                } else if (key == "mode") {
+                    if (value == "parallel") {
+                        job.mode = Command::AnimationMode::Parallel;
+                    } else if (value == "sequential") {
+                        job.mode = Command::AnimationMode::Sequential;
+                    } else {
+                        std::cerr << "Warning: Invalid animation mode '" << value << "'. Using 'parallel'.\n";
+                    }
+                } else if (key == "renderType") {
+                    job.renderType = value;
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "Warning: Failed to parse '" << key << "' in job file. Error: " << e.what() << "\n";
+            }
+        }
+
+        if (!hasRange || !hasStep) {
+            std::cerr << "Warning: Job missing required 'range' or 'step'. Skipping.\n";
+            continue;
+        }
+
+        jobs.push_back(job);
+    }
+
+    if (jobs.empty()) {
+        throw std::runtime_error("No valid jobs found in file: " + jobFile);
+    }
+
+    return jobs;
+}
+
+// ─────────────────────────────────────────────────────────────
+void AppController::runBatchMode(const std::string& jobFile)
+{
+    std::vector<RenderJob> jobs;
+    try {
+        jobs = parseJobFile(jobFile);
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << "\n";
+        return;
+    }
+
+    // Enter fullscreen mode for batch rendering
+    if (!isFullscreen_) {
+        toggleFullscreen(CollatzCollection{});  // Pass empty collection (will be rebuilt per job)
+    }
+
+    bool running = true;
+    while (running && window_.isOpen()) {
+        for (const auto& job : jobs) {
+            if (!window_.isOpen()) {
+                running = false;
+                break;
+            }
+
+            // Skip unsupported render types
+            if (job.renderType != "feather") {
+                std::cerr << "Warning: Render type '" << job.renderType << "' not supported. Using 'feather'.\n";
+            }
+
+            // Generate sequences
+            CollatzCollection collection;
+            try {
+                collection = CollatzEngine::generate(job.range, job.step);
+            } catch (const std::exception& e) {
+                std::cerr << "Error generating sequences: " << e.what() << "\n";
+                continue;
+            }
+
+            // Apply job config
+            RenderConfig config;
+            config.evenAngle = job.evenAngle;
+            config.oddAngle = job.oddAngle;
+            config.fixedColor = job.color;
+            config.backgroundColor = job.background;
+            config.speed = job.speed;
+
+            // Rebuild renderer with new config
+            try {
+                renderer_.build(collection, config, window_.getSize());
+                renderer_.setAnimationMode(job.mode, collection);
+                playback_.setSpeed(config.speed);
+                playback_.play();
+            } catch (const std::exception& e) {
+                std::cerr << "Error rebuilding renderer: " << e.what() << "\n";
+                continue;
+            }
+
+            // Render loop for this job
+            while (!renderer_.isDone() && window_.isOpen()) {
+                while (auto event = window_.pollEvent()) {
+                    if (event->is<sf::Event::Closed>() || 
+                        (event->is<sf::Event::KeyPressed>() && event->getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::Escape)) {
+                        window_.close();
+                        running = false;
+                    }
+                }
+
+                // Update and draw
+                int steps = playback_.tick(1.0f / 60.0f);  // Assume 60 FPS
+                if (steps > 0) {
+                    renderer_.update(steps);
+                }
+
+                window_.clear(config.backgroundColor);
+                renderer_.draw(window_);
+                window_.display();
+            }
+        }
     }
 }
 

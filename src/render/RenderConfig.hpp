@@ -1,6 +1,47 @@
 #pragma once
 #include "app/Command.hpp"
 #include <SFML/Graphics/Color.hpp>
+#include <string>
+#include <vector>
+#include <sstream>
+#include <stdexcept>
+
+// Helper function to parse sf::Color from a string (e.g., "255,0,0")
+inline sf::Color parseColor(const std::string& colorStr) {
+    std::istringstream iss(colorStr);
+    std::string token;
+    std::vector<int> rgb;
+
+    while (std::getline(iss, token, ',')) {
+        try {
+            rgb.push_back(std::stoi(token));
+        } catch (const std::exception&) {
+            throw std::invalid_argument("Invalid color format. Use R,G,B (e.g., '255,0,0')");
+        }
+    }
+
+    if (rgb.size() != 3) {
+        throw std::invalid_argument("Invalid color format. Use R,G,B (e.g., '255,0,0')");
+    }
+
+    return sf::Color(
+        static_cast<unsigned char>(std::clamp(rgb[0], 0, 255)),
+        static_cast<unsigned char>(std::clamp(rgb[1], 0, 255)),
+        static_cast<unsigned char>(std::clamp(rgb[2], 0, 255))
+    );
+}
+
+struct RenderJob {
+    int64_t range;
+    int64_t step;
+    float evenAngle = 12.0f;
+    float oddAngle = 24.0f;
+    sf::Color color = sf::Color::Black;
+    sf::Color background = sf::Color::White;
+    int speed = 4;
+    Command::AnimationMode mode = Command::AnimationMode::Parallel;
+    std::string renderType = "feather";  // Default to "feather" for backward compatibility
+};
 
 struct RenderConfig {
     float                angle      { 5.f };    // Deprecated: use evenAngle and oddAngle instead

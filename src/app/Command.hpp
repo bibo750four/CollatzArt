@@ -1,5 +1,6 @@
 #pragma once
 #include <SFML/Graphics/Color.hpp>
+#include <string>
 
 struct Command
 {
@@ -16,6 +17,7 @@ struct Command
         SetRenderColor, // payload: color (sf::Color)
         SetBackgroundColor, // payload: color (sf::Color)
         ToggleFullscreen,
+        BatchMode,      // payload: stringVal (job file path)
         Quit
     };
 
@@ -29,4 +31,5 @@ struct Command
     SegmentMode     segmentMode { SegmentMode::Constant };
     AnimationMode   animationMode { AnimationMode::Parallel };
     sf::Color        color { sf::Color::Black };  // Used for SetRenderColor and SetBackgroundColor
+    std::string      stringVal;  // Used for BatchMode (job file path)
 };

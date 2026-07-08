@@ -165,6 +165,7 @@ void CLIView::printMenu() const
     row("+  / -     \u2192 speed");
     row("f          \u2192 fullscreen");
     row("cr         → change render color");
+    row("batch <file> → run batch jobs from file");
     row("cb         → change background color");
     row("m p / m s   \u2192 animation parallel/sequential");
     row("q          \u2192 quit");
@@ -225,6 +226,20 @@ sf::Color CLIView::selectColor()
             std::cout << "Invalid choice. Using Black.\n";
             return sf::Color::Black;
     }
+}
+
+// ─────────────────────────────────────────────────────────────
+void CLIView::handleBatchCommand(const std::vector<std::string>& tokens)
+{
+    if (tokens.empty()) {
+        std::cout << "Usage: batch <job_file>\n";
+        std::cout << "Press Enter to continue...";
+        std::cin.ignore();
+        return;
+    }
+
+    std::string jobFile = tokens[0];
+    queue_.push({ Command::Type::BatchMode, 0.f, Command::ColorMode::Fixed, Command::SegmentMode::Constant, Command::AnimationMode::Parallel, sf::Color::Black, jobFile });
 }
 
 
@@ -377,6 +392,12 @@ bool CLIView::parseLine(const std::string& line)
     // --- fullscreen ---
     if (token == "f") {
         queue_.push({ Command::Type::ToggleFullscreen });
+        return true;
+    }
+
+    // --- batch ---
+    if (token == "batch" && ss >> token) {
+        handleBatchCommand({token});
         return true;
     }
 

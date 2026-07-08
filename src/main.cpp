@@ -13,8 +13,26 @@ constexpr int64_t MAX_STEP = 10000;
 constexpr int64_t MAX_START_VALUE = 1000000;
 
 
-int main()
+int main(int argc, char* argv[])
 {
+    // Check for batch mode (--file argument)
+    if (argc > 1 && std::string(argv[1]) == "--file" && argc > 2) {
+        CommandQueue<Command> queue;
+        CLIView cli(queue);
+        AppController app(queue, cli);
+
+        // Run batch mode directly (no CLI thread)
+        try {
+            app.runBatchMode(argv[2]);
+        } catch (const std::exception& e) {
+            std::cerr << "Error: " << e.what() << '\n';
+            return 1;
+        }
+
+        return 0;
+    }
+
+    // Interactive mode
     std::cout << "For how many integers do you want to calculate the Collatz sequence?\n";
     std::cout << "(Maximum: " << MAX_RANGE << ")\n";
     int64_t range{};
