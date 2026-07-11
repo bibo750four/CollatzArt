@@ -55,6 +55,7 @@ public:
     // Lets the main thread signal that the CLI should stop
     // (e.g. the user closed the SFML window).
     void requestStop() { stop_.store(true); }
+    void setRangeStep(int64_t range, int64_t step) { range_ = range; step_ = step; }
 
 private:
     void printMenu() const;
@@ -62,10 +63,16 @@ private:
     void handleRenderColorCommand();
     void handleBackgroundColorCommand();
     void handleBatchCommand(const std::vector<std::string>& tokens);
+    void handleStoreCommand(const std::vector<std::string>& tokens);
     sf::Color selectColor();
+    std::string currentSettingsToJobString() const;
 
     CommandQueue<Command>& queue_;
     DisplayState           state_;
     std::atomic<bool>      stop_{ false };
+    int64_t                range_{ 0 };
+    int64_t                step_{ 0 };
+    sf::Color              currentColor_{ sf::Color::Black };
+    sf::Color              currentBackground_{ sf::Color::White };
 };
 

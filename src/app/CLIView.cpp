@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <fstream>
 #include <unistd.h>
 
 static void clearScreen() {
@@ -56,7 +57,10 @@ static std::string animationModeStr(Command::AnimationMode m)
 
 // ─────────────────────────────────────────────
 CLIView::CLIView(CommandQueue<Command>& queue)
-    : queue_(queue) {}
+    : queue_(queue)
+    , range_(0)
+    , step_(0)
+{}
 
 void CLIView::run()
 {
@@ -166,8 +170,9 @@ void CLIView::printMenu() const
     row("f          \u2192 fullscreen");
     row("cr         → change render color");
     row("batch <file> → run batch jobs from file");
+    row("store [file]→ save current settings to job file");
     row("cb         → change background color");
-    row("m p / m s   \u2192 animation parallel/sequential");
+    row("m p / m s \u2192 animation parallel/sequential");
     row("q          \u2192 quit");
 
     std::cout << "\u255A" << rep("\u2550", W - 2) << "\u255D\n";
@@ -178,12 +183,14 @@ void CLIView::printMenu() const
 void CLIView::handleRenderColorCommand()
 {
     sf::Color color = selectColor();
+    currentColor_ = color;
     queue_.push({ Command::Type::SetRenderColor, 0.f, Command::ColorMode::Fixed, Command::SegmentMode::Constant, Command::AnimationMode::Parallel, color });
 }
 
 void CLIView::handleBackgroundColorCommand()
 {
     sf::Color color = selectColor();
+    currentBackground_ = color;
     queue_.push({ Command::Type::SetBackgroundColor, 0.f, Command::ColorMode::Fixed, Command::SegmentMode::Constant, Command::AnimationMode::Parallel, color });
 }
 
@@ -226,6 +233,61 @@ sf::Color CLIView::selectColor()
             std::cout << "Invalid choice. Using Black.\n";
             return sf::Color::Black;
     }
+}
+
+// ─────────────────────────────────────────────────────────────
+std::string CLIView::currentSettingsToJobString() const
+{
+    std::ostringstream oss;
+    oss << "range=" << range_ << " step=" << step_;
+    
+    // Angles
+    oss << " evenAngle=" << state_.evenAngle;
+    oss << " oddAngle=" << state_.oddAngle;
+    
+    // Color and background
+    oss << " color=" << static_cast<int>(currentColor_.r) << ","
+        << static_cast<int>(currentColor_.g) << "," << static_cast<int>(currentColor_.b);
+    
+    oss << " background=" << static_cast<int>(currentBackground_.r) << ","
+        << static_cast<int>(currentBackground_.g) << "," << static_cast<int>(currentBackground_.b);
+    
+    // Speed and mode
+    oss << " speed=" << state_.speed;
+    oss << " mode=" << (state_.animationMode == Command::AnimationMode::Parallel ? "parallel" : "sequential");
+    
+    return oss.str();
+}
+
+// ─────────────────────────────────────────────────────────────
+void CLIView::handleStoreCommand(const std::vector<std::string>& tokens)
+{
+    std::string filename = tokens.empty() ? "jobs.txt" : tokens[0];
+
+    // Validate that range and step are set
+    if (state_.segmentLen <= 0) {
+        std::cout << "Error: Segment length must be set before storing.\n";
+        std::cout << "Press Enter to continue...";
+        std::cin.ignore();
+        return;
+    }
+
+    std::string jobLine = currentSettingsToJobString();
+    std::ofstream file(filename, std::ios::app);  // Append mode
+
+    if (!file.is_open()) {
+        std::cout << "Error: Failed to open file '" << filename << "' for writing.\n";
+        std::cout << "Press Enter to continue...";
+        std::cin.ignore();
+        return;
+    }
+
+    file << jobLine << "\n";
+    file.close();
+
+    std::cout << "Settings saved to '" << filename << "'.\n";
+    std::cout << "Press Enter to continue...";
+    std::cin.ignore();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -398,6 +460,17 @@ bool CLIView::parseLine(const std::string& line)
     // --- batch ---
     if (token == "batch" && ss >> token) {
         handleBatchCommand({token});
+        return true;
+    }
+
+    // --- store ---
+    if (token == "store") {
+        std::string filename;
+        if (ss >> filename) {
+            handleStoreCommand({filename});
+        } else {
+            handleStoreCommand({});  // Use default filename
+        }
         return true;
     }
 

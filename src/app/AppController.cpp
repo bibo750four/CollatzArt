@@ -24,9 +24,12 @@ sf::VideoMode AppController::getInitialVideoMode()
 
 // ─────────────────────────────────────────────────────────────
 void AppController::run(const CollatzCollection& collection,
-                        const RenderConfig&      initialConfig)
+                        const RenderConfig&      initialConfig,
+                        int64_t range,
+                        int64_t step)
 {
     config_ = initialConfig;
+    cliView_.setRangeStep(range, step);
     try {
         rebuild(collection);      // initial build
     } catch (const std::exception& e) {

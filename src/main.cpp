@@ -79,6 +79,8 @@ int main(int argc, char* argv[])
     
     std::cout << "Generating " << range << " sequences, max starting number: " << maxStart << '\n';
 
+
+
     CollatzCollection collection;
     try {
         collection = CollatzEngine::generate(range, step);
@@ -113,7 +115,7 @@ int main(int argc, char* argv[])
     std::thread cliThread([&cli]() { cli.run(); });
 
     try {
-        app.run(collection, RenderConfig{});   // blocks until the window is closed
+        app.run(collection, RenderConfig{}, range, step);   // blocks until the window is closed
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << '\n';
         cli.requestStop();

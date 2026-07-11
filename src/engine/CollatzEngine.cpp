@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <climits>
+#include <iostream>
 
 /**
  * Computes the Collatz sequence for a given starting number.
@@ -45,6 +46,10 @@ Sequence CollatzEngine::compute(int64_t n)
 
 CollatzCollection CollatzEngine::generate(int64_t range, int64_t step)
 {
+    if (step > range) {
+        std::cerr << "Warning: Step (" << step << ") is larger than range (" << range << "). Sequences may not overlap.\n";
+    }
+
     CollatzCollection collection;
     collection.reserve(range);
 

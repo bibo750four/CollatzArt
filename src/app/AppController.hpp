@@ -12,7 +12,7 @@
 class AppController {
 public:
     AppController(CommandQueue<Command>& queue, CLIView& cliView);
-    void run(const CollatzCollection& collection, const RenderConfig& initialConfig);
+    void run(const CollatzCollection& collection, const RenderConfig& initialConfig, int64_t range = 0, int64_t step = 0);
     /**
      * Runs the application in batch mode using a job file.
      * @param jobFile Path to the job file.
