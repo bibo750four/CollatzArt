@@ -57,14 +57,14 @@ void AppController::run(const CollatzCollection& collection,
         // 3 — advance animation
         int steps = playback_.tick(dt);
         if (steps > 0) {
-            renderer_.update(steps);
-            if (renderer_.isDone())
+            renderer_->update(steps);
+            if (renderer_->isDone())
                 playback_.notifyDone();
         }
 
         // 4 — render
         window_.clear(config_.backgroundColor);
-        renderer_.draw(window_);
+        renderer_->draw(window_);
         window_.display();
     }
 }
@@ -79,7 +79,7 @@ void AppController::applyCommand(const Command& cmd,
 
         case Command::Type::Reset:
             playback_.reset();
-            renderer_.reset();
+            renderer_->reset();
             playback_.play();
             break;
 
@@ -98,7 +98,7 @@ void AppController::applyCommand(const Command& cmd,
             config_.evenAngle = cmd.floatVal;
             config_.oddAngle = cmd.floatVal;
             try {
-                renderer_.applyConfig(config_, window_.getSize());
+                renderer_->applyConfig(config_, window_.getSize());
                 playback_.reset();
                 playback_.play();
             } catch (const std::exception& e) {
@@ -110,7 +110,7 @@ void AppController::applyCommand(const Command& cmd,
         case Command::Type::SetEvenAngle:
             config_.evenAngle = cmd.floatVal;
             try {
-                renderer_.applyConfig(config_, window_.getSize());
+                renderer_->applyConfig(config_, window_.getSize());
                 playback_.reset();
                 playback_.play();
             } catch (const std::exception& e) {
@@ -122,7 +122,18 @@ void AppController::applyCommand(const Command& cmd,
         case Command::Type::SetOddAngle:
             config_.oddAngle = cmd.floatVal;
             try {
-                renderer_.applyConfig(config_, window_.getSize());
+                renderer_->applyConfig(config_, window_.getSize());
+                playback_.reset();
+                playback_.play();
+            } catch (const std::exception& e) {
+                std::cerr << "Error applying config: " << e.what() << "\n";
+            }
+            break;
+
+        case Command::Type::SetBranchAngle:
+            config_.branchAngle = cmd.floatVal;
+            try {
+                renderer_->applyConfig(config_, window_.getSize());
                 playback_.reset();
                 playback_.play();
             } catch (const std::exception& e) {
@@ -133,7 +144,7 @@ void AppController::applyCommand(const Command& cmd,
         case Command::Type::SetSegmentLen:
             config_.segmentLen = cmd.floatVal;
             try {
-                renderer_.applyConfig(config_, window_.getSize());
+                renderer_->applyConfig(config_, window_.getSize());
                 playback_.reset();
                 playback_.play();
             } catch (const std::exception& e) {
@@ -144,7 +155,7 @@ void AppController::applyCommand(const Command& cmd,
         case Command::Type::SetSegmentMode:
             config_.segmentMode = cmd.segmentMode;
             try {
-                renderer_.applyConfig(config_, window_.getSize());
+                renderer_->applyConfig(config_, window_.getSize());
                 playback_.reset();
                 playback_.play();
             } catch (const std::exception& e) {
@@ -155,7 +166,9 @@ void AppController::applyCommand(const Command& cmd,
         case Command::Type::SetColorMode:
             config_.colorMode = cmd.colorMode;
             try {
-                renderer_.recolor(config_);   // recolor only, do not reset animation
+                if (auto* featherRenderer = dynamic_cast<FeatherRenderer*>(renderer_.get())) {
+                    featherRenderer->recolor(config_);
+                }
             } catch (const std::exception& e) {
                 std::cerr << "Error recoloring: " << e.what() << "\n";
             }
@@ -163,7 +176,9 @@ void AppController::applyCommand(const Command& cmd,
 
         case Command::Type::SetAnimationMode:
             try {
-                renderer_.setAnimationMode(cmd.animationMode, collection);
+                if (auto* featherRenderer = dynamic_cast<FeatherRenderer*>(renderer_.get())) {
+                    featherRenderer->setAnimationMode(cmd.animationMode, collection);
+                }
                 playback_.reset();
                 playback_.play();
             } catch (const std::exception& e) {
@@ -181,11 +196,16 @@ void AppController::applyCommand(const Command& cmd,
 
         case Command::Type::SetRenderColor:
             config_.fixedColor = cmd.color;
-            renderer_.recolor(config_);
+            renderer_->recolor(config_);
             break;
 
         case Command::Type::SetBackgroundColor:
             config_.backgroundColor = cmd.color;
+            break;
+
+        case Command::Type::SetRenderer:
+            config_.rendererType = cmd.stringVal;
+            rebuild(collection);  // Rebuild with the new renderer
             break;
 
         case Command::Type::BatchMode:
@@ -224,7 +244,8 @@ void AppController::toggleFullscreen(const CollatzCollection& collection)
 void AppController::rebuild(const CollatzCollection& collection)
 {
     try {
-        renderer_.build(collection, config_, window_.getSize());
+        renderer_ = RendererFactory::createRenderer(config_);
+        renderer_->build(collection, config_, window_.getSize());
     } catch (const std::exception& e) {
         std::cerr << "Error rebuilding renderer: " << e.what() << "\n";
         throw; // Re-throw to be handled by caller
@@ -276,6 +297,18 @@ std::vector<RenderJob> AppController::parseJobFile(const std::string& jobFile)
                     job.evenAngle = std::stof(value);
                 } else if (key == "oddAngle") {
                     job.oddAngle = std::stof(value);
+                } else if (key == "branchAngle") {
+                    job.branchAngle = std::stof(value);
+                } else if (key == "segmentLen") {
+                    job.segmentLen = std::stof(value);
+                } else if (key == "segmentMode") {
+                    if (value == "constant") {
+                        job.segmentMode = Command::SegmentMode::Constant;
+                    } else if (value == "decreasing") {
+                        job.segmentMode = Command::SegmentMode::Decreasing;
+                    } else {
+                        std::cerr << "Warning: Invalid segment mode '" << value << "'. Using 'constant'.\n";
+                    }
                 } else if (key == "color") {
                     job.color = parseColor(value);
                 } else if (key == "background") {
@@ -291,8 +324,8 @@ std::vector<RenderJob> AppController::parseJobFile(const std::string& jobFile)
                     } else {
                         std::cerr << "Warning: Invalid animation mode '" << value << "'. Using 'parallel'.\n";
                     }
-                } else if (key == "renderType") {
-                    job.renderType = value;
+                } else if (key == "rendererType") {
+                    job.rendererType = value;
                 }
             } catch (const std::exception& e) {
                 std::cerr << "Warning: Failed to parse '" << key << "' in job file. Error: " << e.what() << "\n";
@@ -338,10 +371,8 @@ void AppController::runBatchMode(const std::string& jobFile)
                 break;
             }
 
-            // Skip unsupported render types
-            if (job.renderType != "feather") {
-                std::cerr << "Warning: Render type '" << job.renderType << "' not supported. Using 'feather'.\n";
-            }
+            // Use the specified renderer type
+            config_.rendererType = job.rendererType;
 
             // Generate sequences
             CollatzCollection collection;
@@ -354,16 +385,22 @@ void AppController::runBatchMode(const std::string& jobFile)
 
             // Apply job config
             RenderConfig config;
+            config.rendererType = job.rendererType;
             config.evenAngle = job.evenAngle;
             config.oddAngle = job.oddAngle;
+            config.branchAngle = job.branchAngle;
+            config.segmentLen = job.segmentLen;
+            config.segmentMode = job.segmentMode;
             config.fixedColor = job.color;
             config.backgroundColor = job.background;
             config.speed = job.speed;
+            config_.rendererType = job.rendererType;  // Update active config
 
             // Rebuild renderer with new config
             try {
-                renderer_.build(collection, config, window_.getSize());
-                renderer_.setAnimationMode(job.mode, collection);
+                renderer_ = RendererFactory::createRenderer(config);
+                renderer_->build(collection, config, window_.getSize());
+                renderer_->applyConfig(config, window_.getSize());
                 playback_.setSpeed(config.speed);
                 playback_.play();
             } catch (const std::exception& e) {
@@ -372,7 +409,7 @@ void AppController::runBatchMode(const std::string& jobFile)
             }
 
             // Render loop for this job
-            while (!renderer_.isDone() && window_.isOpen()) {
+            while (!renderer_->isDone() && window_.isOpen()) {
                 while (auto event = window_.pollEvent()) {
                     if (event->is<sf::Event::Closed>() || 
                         (event->is<sf::Event::KeyPressed>() && event->getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::Escape)) {
@@ -384,11 +421,11 @@ void AppController::runBatchMode(const std::string& jobFile)
                 // Update and draw
                 int steps = playback_.tick(1.0f / 60.0f);  // Assume 60 FPS
                 if (steps > 0) {
-                    renderer_.update(steps);
+                    renderer_->update(steps);
                 }
 
                 window_.clear(config.backgroundColor);
-                renderer_.draw(window_);
+                renderer_->draw(window_);
                 window_.display();
             }
         }

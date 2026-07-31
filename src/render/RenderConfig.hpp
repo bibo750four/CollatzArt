@@ -36,18 +36,23 @@ struct RenderJob {
     int64_t step;
     float evenAngle = 12.0f;
     float oddAngle = 24.0f;
+    float branchAngle = 30.0f;
+    float segmentLen = 1.0f;
+    Command::SegmentMode segmentMode = Command::SegmentMode::Constant;
     sf::Color color = sf::Color::Black;
     sf::Color background = sf::Color::White;
     int speed = 4;
     Command::AnimationMode mode = Command::AnimationMode::Parallel;
-    std::string renderType = "feather";  // Default to "feather" for backward compatibility
+    std::string rendererType = "feather";  // Default to "feather" for backward compatibility
 };
 
 struct RenderConfig {
+    std::string rendererType = "feather";  // "feather" or "tree"
     float                angle      { 5.f };    // Deprecated: use evenAngle and oddAngle instead
     // Angles for branches (degrees)
     float                evenAngle  { 12.f };    // Angle for even branches
-    float                oddAngle   { 24.f };    // Angle for odd branches
+    float                oddAngle   { 24.f };    // Angle for odd branches (feather)
+    float                branchAngle{ 30.f };    // Angle for tree branches (tree)
     float                segmentLen { 1.f };
     float                decay      { 0.95f };  // used in Decreasing segment mode
     Command::SegmentMode segmentMode{ Command::SegmentMode::Constant };

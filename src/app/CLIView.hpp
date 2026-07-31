@@ -15,11 +15,13 @@ struct DisplayState
     float       angle       { 5.f };   // degrees
     float       evenAngle   { 12.f };   // degrees
     float       oddAngle    { 24.f };   // degrees
+    float       branchAngle { 30.f };  // degrees (tree-specific)
     float       segmentLen  { 1.f };
     Command::SegmentMode segmentMode { Command::SegmentMode::Constant };
     Command::ColorMode   colorMode   { Command::ColorMode::Fixed };
     Command::AnimationMode animationMode { Command::AnimationMode::Parallel };
     int         speed       { 4 };      // 1..8
+    std::string rendererType { "feather" }; // Active renderer type
 };
 
 // Global mutex for thread-safe console I/O
@@ -64,6 +66,7 @@ private:
     void handleBackgroundColorCommand();
     void handleBatchCommand(const std::vector<std::string>& tokens);
     void handleStoreCommand(const std::vector<std::string>& tokens);
+    void handleRendererCommand();
     sf::Color selectColor();
     std::string currentSettingsToJobString() const;
 

@@ -10,10 +10,12 @@ struct Command
         SetAngle,       // payload: floatVal (degrees)
         SetEvenAngle,   // payload: floatVal (degrees)
         SetOddAngle,    // payload: floatVal (degrees)
+        SetBranchAngle, // payload: floatVal (degrees, tree-specific)
         SetSegmentLen,  // payload: floatVal (length)
         SetSegmentMode, // payload: segmentMode
         SetColorMode,   // payload: colorMode
         SetAnimationMode, // payload: animationMode
+        SetRenderer,    // payload: stringVal (renderer type)
         SetRenderColor, // payload: color (sf::Color)
         SetBackgroundColor, // payload: color (sf::Color)
         ToggleFullscreen,

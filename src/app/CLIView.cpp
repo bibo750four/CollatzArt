@@ -125,30 +125,40 @@ void CLIView::printMenu() const
     sep();
 
     row("State:  " + std::string(state_.playing ? "PLAY \u25B6" : "PAUSE \u23F8"));
+    row("Renderer: " + state_.rendererType);
 
-    {
-        std::ostringstream ss;
-        ss << "Angle \u03B8 (both): " << std::fixed << std::setprecision(1)
-           << state_.angle << "\u00B0";
-        row(ss.str());
-    }
-    {
-        std::ostringstream ss;
-        ss << "Even angle: " << std::fixed << std::setprecision(1)
-           << state_.evenAngle << "\u00B0";
-        row(ss.str());
-    }
-    {
-        std::ostringstream ss;
-        ss << "Odd angle:  " << std::fixed << std::setprecision(1)
-           << state_.oddAngle << "\u00B0";
-        row(ss.str());
-    }
-    {
-        std::ostringstream ss;
-        ss << "Segment: " << std::fixed << std::setprecision(1)
-           << state_.segmentLen << "  [" << segmentModeStr(state_.segmentMode) << "]";
-        row(ss.str());
+    if (state_.rendererType == "feather") {
+        {
+            std::ostringstream ss;
+            ss << "Angle \u03B8 (both): " << std::fixed << std::setprecision(1)
+               << state_.angle << "\u00B0";
+            row(ss.str());
+        }
+        {
+            std::ostringstream ss;
+            ss << "Even angle: " << std::fixed << std::setprecision(1)
+               << state_.evenAngle << "\u00B0";
+            row(ss.str());
+        }
+        {
+            std::ostringstream ss;
+            ss << "Odd angle:  " << std::fixed << std::setprecision(1)
+               << state_.oddAngle << "\u00B0";
+            row(ss.str());
+        }
+        {
+            std::ostringstream ss;
+            ss << "Segment: " << std::fixed << std::setprecision(1)
+               << state_.segmentLen << "  [" << segmentModeStr(state_.segmentMode) << "]";
+            row(ss.str());
+        }
+    } else if (state_.rendererType == "tree") {
+        {
+            std::ostringstream ss;
+            ss << "Branch angle: " << std::fixed << std::setprecision(1)
+               << state_.branchAngle << "\u00B0";
+            row(ss.str());
+        }
     }
 
     row("Animation: " + animationModeStr(state_.animationMode));
@@ -160,12 +170,17 @@ void CLIView::printMenu() const
     row("COMMANDS");
     row("p          \u2192 play / pause");
     row("r          \u2192 reset");
-    row("a <deg>    \u2192 angle (both even/odd)");
-    row("ae <deg>   \u2192 even angle");
-    row("ao <deg>   \u2192 odd angle");
-    row("l <val>    \u2192 segment length");
-    row("lc / ld    \u2192 constant / decreasing");
+    if (state_.rendererType == "feather") {
+        row("a <deg>    \u2192 angle (both even/odd)");
+        row("ae <deg>   \u2192 even angle");
+        row("ao <deg>   \u2192 odd angle");
+        row("l <val>    \u2192 segment length");
+        row("lc / ld    \u2192 constant / decreasing");
+    } else if (state_.rendererType == "tree") {
+        row("ba <deg>   \u2192 branch angle");
+    }
     row("cf/cs/cp   \u2192 color fixed/sequence/parity");
+    row("renderer   → select active renderer");
     row("+  / -     \u2192 speed");
     row("f          \u2192 fullscreen");
     row("cr         → change render color");
@@ -240,10 +255,18 @@ std::string CLIView::currentSettingsToJobString() const
 {
     std::ostringstream oss;
     oss << "range=" << range_ << " step=" << step_;
+    oss << " rendererType=" << state_.rendererType;
     
-    // Angles
-    oss << " evenAngle=" << state_.evenAngle;
-    oss << " oddAngle=" << state_.oddAngle;
+    if (state_.rendererType == "feather") {
+        // Angles
+        oss << " evenAngle=" << state_.evenAngle;
+        oss << " oddAngle=" << state_.oddAngle;
+        oss << " segmentLen=" << state_.segmentLen;
+        oss << " segmentMode=" << (state_.segmentMode == Command::SegmentMode::Constant ? "constant" : "decreasing");
+    } else if (state_.rendererType == "tree") {
+        // Tree-specific
+        oss << " branchAngle=" << state_.branchAngle;
+    }
     
     // Color and background
     oss << " color=" << static_cast<int>(currentColor_.r) << ","
@@ -286,6 +309,38 @@ void CLIView::handleStoreCommand(const std::vector<std::string>& tokens)
     file.close();
 
     std::cout << "Settings saved to '" << filename << "'.\n";
+    std::cout << "Press Enter to continue...";
+    std::cin.ignore();
+}
+
+// ─────────────────────────────────────────────────────────────
+void CLIView::handleRendererCommand()
+{
+    ConsoleMutex::Lock lock;
+    std::cout << "\nSelect a renderer:\n";
+    std::cout << "  1. Feather Renderer\n";
+    std::cout << "  2. Collatz Tree Renderer\n";
+    std::cout << "Enter choice (1-2): ";
+
+    int choice;
+    std::cin >> choice;
+    std::cin.ignore(); // Clear newline
+
+    switch (choice) {
+        case 1:
+            state_.rendererType = "feather";
+            queue_.push({ Command::Type::SetRenderer, 0.f, Command::ColorMode::Fixed, Command::SegmentMode::Constant, Command::AnimationMode::Parallel, sf::Color::Black, "feather" });
+            std::cout << "Switched to Feather Renderer.\n";
+            break;
+        case 2:
+            state_.rendererType = "tree";
+            queue_.push({ Command::Type::SetRenderer, 0.f, Command::ColorMode::Fixed, Command::SegmentMode::Constant, Command::AnimationMode::Parallel, sf::Color::Black, "tree" });
+            std::cout << "Switched to Collatz Tree Renderer.\n";
+            break;
+        default:
+            std::cout << "Invalid choice.\n";
+    }
+    
     std::cout << "Press Enter to continue...";
     std::cin.ignore();
 }
@@ -382,6 +437,19 @@ bool CLIView::parseLine(const std::string& line)
         return true;
     }
 
+    // --- branch angle (tree-specific) ---
+    if (token == "ba") {
+        float val;
+        if (ss >> val && val > 0.f && val < 180.f) {
+            state_.branchAngle = val;
+            queue_.push({ Command::Type::SetBranchAngle, val });
+        } else {
+            std::cout << "Invalid value. Use: ba <degrees>  (0 < θ < 180)\n";
+            std::cin.ignore();
+        }
+        return true;
+    }
+
     // --- segment mode ---
     if (token == "lc") {
         state_.segmentMode = Command::SegmentMode::Constant;
@@ -471,6 +539,12 @@ bool CLIView::parseLine(const std::string& line)
         } else {
             handleStoreCommand({});  // Use default filename
         }
+        return true;
+    }
+
+    // --- renderer ---
+    if (token == "renderer") {
+        handleRendererCommand();
         return true;
     }
 

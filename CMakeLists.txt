@@ -20,12 +20,15 @@ set(SOURCES
     src/app/AppController.cpp
     src/render/FeatherTree.cpp
     src/render/FeatherRenderer.cpp
+    src/render/RendererFactory.cpp
+    src/render/CollatzTreeRenderer.cpp
     
     # Header files (Adding these makes them visible in Xcode)
     src/engine/CollatzEngine.hpp
     src/render/Renderer.hpp
     src/render/FeatherRenderer.hpp
     src/render/FeatherTree.hpp
+    src/render/CollatzTreeRenderer.hpp
     src/render/RenderConfig.hpp
     src/app/CLIView.hpp
     src/app/Command.hpp

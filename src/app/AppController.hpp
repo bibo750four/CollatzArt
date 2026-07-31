@@ -3,7 +3,7 @@
 #include "Command.hpp"
 #include "CLIView.hpp"
 #include "PlaybackController.hpp"
-#include "render/FeatherRenderer.hpp"
+#include "render/RendererFactory.hpp"
 #include "render/RenderConfig.hpp"
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <vector>
@@ -43,7 +43,7 @@ private:
     CommandQueue<Command>& commandQueue_;
     CLIView&               cliView_;
     sf::RenderWindow       window_;
-    FeatherRenderer        renderer_;
+    std::unique_ptr<Renderer> renderer_;
     PlaybackController     playback_;
     RenderConfig           config_;
     bool                   isFullscreen_{ false };
