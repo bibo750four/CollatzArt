@@ -98,7 +98,7 @@ void CLIView::printMenu() const
     ConsoleMutex::Lock lock; // Thread-safe console output
     clearScreen();
 
-    const int W = 46;
+    const int W = 60;
 
     // Repeats a UTF-8 string n times (not a single char — \u2550 is 3 bytes)
     auto rep = [](const std::string& s, int n) {
