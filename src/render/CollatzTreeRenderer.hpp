@@ -21,6 +21,9 @@ public:
     bool isDone() const override;
     std::string getName() const;
 
+    // Set target configuration for smooth interpolation
+    void setTargetConfig(const RenderConfig& targetConfig);
+
 private:
     struct TreeNode {
         sf::Vector2f position;
@@ -33,9 +36,14 @@ private:
     void drawTree(sf::RenderWindow& window, const std::shared_ptr<TreeNode>& node, const sf::Vector2f& parentPosition, sf::VertexArray& vertices) const;
 
     RenderConfig config_;
+    RenderConfig targetConfig_;
+    float interpolationProgress_;
     std::shared_ptr<TreeNode> root_;
     sf::VertexArray vertices_;
     sf::Vector2f center_;
     float maxRadius_;
     bool isDone_;
+
+    // Interpolate between current and target config
+    void interpolateConfig(float progress);
 };

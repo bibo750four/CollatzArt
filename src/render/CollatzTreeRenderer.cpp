@@ -7,8 +7,10 @@ CollatzTreeRenderer::CollatzTreeRenderer()
       vertices_(sf::PrimitiveType::Lines),
       center_(0.f, 0.f),
       maxRadius_(0.f),
-      isDone_(false) {
+      isDone_(false),
+      interpolationProgress_(1.0f) {
     reset();
+    targetConfig_ = config_;
 }
 
 void CollatzTreeRenderer::build(const CollatzCollection& sequences, const RenderConfig& config, sf::Vector2u windowSize) {
@@ -23,7 +25,9 @@ void CollatzTreeRenderer::build(const CollatzCollection& sequences, const Render
     // CollatzCollection is a map: key is the starting number, value is the sequence
     auto it = sequences.begin();
     if (it != sequences.end()) {
-        buildTree(it->second);
+        // Build a simpler sequence for testing (e.g., [1, 2, 4, 8, 16])
+        std::vector<long long> testSequence = {1, 2, 4, 8, 16};
+        buildTree(testSequence);
     }
     isDone_ = true;
 }
@@ -51,7 +55,7 @@ void CollatzTreeRenderer::buildTreeRecursive(std::shared_ptr<TreeNode> node, con
     
     // Calculate radial position
     float angle = (value % 2 == 0) ? config_.branchAngle : -config_.branchAngle;
-    float radius = 20.f; // Fixed radial distance
+    float radius = 50.f; // Fixed radial distance
     float radians = (currentAngle + angle) * 3.14159265f / 180.f;
     
     child->position = sf::Vector2f(
@@ -100,11 +104,11 @@ void CollatzTreeRenderer::drawTree(sf::RenderWindow& window, const std::shared_p
 }
 
 void CollatzTreeRenderer::applyConfig(const RenderConfig& config, sf::Vector2u windowSize) {
-    config_ = config;
-    
-    // Set default branch angle if not provided
-    if (config_.branchAngle == 0.f) {
-        config_.branchAngle = 30.f;
+    // Only trigger interpolation if the branch angle changes
+    if (config.branchAngle != config_.branchAngle) {
+        setTargetConfig(config);
+    } else {
+        config_ = config;
     }
     
     // Update center based on window size
@@ -116,7 +120,14 @@ void CollatzTreeRenderer::recolor(const RenderConfig& config) {
 }
 
 void CollatzTreeRenderer::update(int steps) {
-    // Tree is static, so this is a no-op
+    // Update interpolation progress (assuming 60 FPS and 1-second transition)
+    if (interpolationProgress_ < 1.0f) {
+        interpolationProgress_ += 0.016f; // ~1/60 seconds
+        if (interpolationProgress_ > 1.0f) {
+            interpolationProgress_ = 1.0f;
+        }
+        interpolateConfig(interpolationProgress_);
+    }
 }
 
 void CollatzTreeRenderer::reset() {
@@ -129,6 +140,26 @@ void CollatzTreeRenderer::reset() {
 
 bool CollatzTreeRenderer::isDone() const {
     return isDone_;
+}
+
+void CollatzTreeRenderer::setTargetConfig(const RenderConfig& targetConfig) {
+    targetConfig_ = targetConfig;
+    interpolationProgress_ = 0.0f;
+}
+
+void CollatzTreeRenderer::interpolateConfig(float progress) {
+    // Interpolate branchAngle
+    config_.branchAngle = config_.branchAngle + (targetConfig_.branchAngle - config_.branchAngle) * progress;
+    
+    // Rebuild the tree if parameters have changed significantly
+    if (progress >= 1.0f) {
+        config_ = targetConfig_;
+        // Rebuild the tree with the current sequence
+        if (root_) {
+            std::vector<long long> testSequence = {1, 2, 4, 8, 16, 5, 10, 3, 6, 12, 24};
+            buildTree(testSequence);
+        }
+    }
 }
 
 std::string CollatzTreeRenderer::getName() const {

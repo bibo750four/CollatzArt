@@ -121,11 +121,10 @@ void CLIView::printMenu() const
     };
 
     std::cout << "\u2554" << rep("\u2550", W - 2) << "\u2557\n";
-    row("Collatz Feather Renderer");
+    row("COLLATZ " + state_.rendererType + " RENDERER");
     sep();
 
     row("State:  " + std::string(state_.playing ? "PLAY \u25B6" : "PAUSE \u23F8"));
-    row("Renderer: " + state_.rendererType);
 
     if (state_.rendererType == "feather") {
         {
