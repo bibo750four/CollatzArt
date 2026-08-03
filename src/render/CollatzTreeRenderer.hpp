@@ -20,6 +20,9 @@ public:
     void reset() override;
     bool isDone() const override;
     std::string getName() const;
+    
+    // Adjust the window size to fit the tree
+    void adjustWindowSize(sf::RenderWindow& window);
 
     // Set target configuration for smooth interpolation
     void setTargetConfig(const RenderConfig& targetConfig);
@@ -43,6 +46,12 @@ private:
     sf::Vector2f center_;
     float maxRadius_;
     bool isDone_;
+    struct BoundingBox {
+        float left;
+        float top;
+        float width;
+        float height;
+    } boundingBox_;  // Bounding box of the tree
 
     // Interpolate between current and target config
     void interpolateConfig(float progress);

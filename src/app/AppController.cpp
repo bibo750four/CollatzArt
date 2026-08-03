@@ -1,4 +1,5 @@
 #include "AppController.hpp"
+#include "CollatzTreeRenderer.hpp"
 #include <SFML/Window/VideoMode.hpp>
 #include <SFML/Window/Event.hpp>
 #include <fstream>
@@ -246,6 +247,14 @@ void AppController::rebuild(const CollatzCollection& collection)
     try {
         renderer_ = RendererFactory::createRenderer(config_);
         renderer_->build(collection, config_, window_.getSize());
+        
+        // Adjust the window size to fit the tree
+        if (config_.rendererType == "tree") {
+            auto* treeRenderer = dynamic_cast<CollatzTreeRenderer*>(renderer_.get());
+            if (treeRenderer) {
+                treeRenderer->adjustWindowSize(window_);
+            }
+        }
     } catch (const std::exception& e) {
         std::cerr << "Error rebuilding renderer: " << e.what() << "\n";
         throw; // Re-throw to be handled by caller
