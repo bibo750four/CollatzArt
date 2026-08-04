@@ -5,6 +5,7 @@
 #include <vector>
 #include <sstream>
 #include <stdexcept>
+#include <algorithm>   // std::clamp
 
 // Helper function to parse sf::Color from a string (e.g., "255,0,0")
 inline sf::Color parseColor(const std::string& colorStr) {

@@ -3,9 +3,33 @@
 #include <sstream>
 #include <iomanip>
 #include <fstream>
-#include <unistd.h>
+#ifdef _WIN32
+#  define NOMINMAX
+#  define WIN32_LEAN_AND_MEAN
+#  include <windows.h>
+#  include <io.h>
+#  define isatty _isatty
+#  define STDOUT_FILENO _fileno(stdout)
+#else
+#  include <unistd.h>
+#endif
+
+// On Windows the console needs to be told, once, that it should interpret ANSI
+// escape sequences and that our output is UTF-8. Both are the default on macOS.
+static void initConsole() {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+    HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD mode = 0;
+    if (out != INVALID_HANDLE_VALUE && GetConsoleMode(out, &mode))
+        SetConsoleMode(out, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+#endif
+}
 
 static void clearScreen() {
+    static const bool consoleReady = (initConsole(), true);
+    (void)consoleReady;
+
     if (isatty(STDOUT_FILENO))
         std::cout << "\033[2J\033[H";
     else

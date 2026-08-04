@@ -1,5 +1,5 @@
 # 1. Specify the minimum required version of CMake
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.21)   # 3.21+ for $<TARGET_RUNTIME_DLLS:...>
 
 # 2. Project name and language (C++ in this case)
 project(CollatzArt VERSION 1.0 LANGUAGES CXX)
@@ -53,4 +53,19 @@ target_include_directories(CollatzArt
 )
 
 target_link_libraries(CollatzArt PRIVATE SFML::Graphics SFML::Window SFML::System)
+
+# MSVC defaults the narrow execution charset to the system ANSI code page, which
+# silently turns \uXXXX escapes outside that page (box drawing, block elements,
+# arrows) into literal '?'. /utf-8 sets both source and execution charset to UTF-8.
+if(MSVC)
+    target_compile_options(CollatzArt PRIVATE /utf-8)
+endif()
+
+# 8. On Windows the SFML DLLs must sit next to the executable at runtime.
+if(WIN32)
+    add_custom_command(TARGET CollatzArt POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_RUNTIME_DLLS:CollatzArt> $<TARGET_FILE_DIR:CollatzArt>
+        COMMAND_EXPAND_LISTS)
+endif()
 

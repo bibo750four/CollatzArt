@@ -40,3 +40,14 @@ CollatzArt
 *.o
 *.a
 *.dylib
+
+# Windows
+# locally downloaded SFML SDK, see build.ps1
+third_party/
+*.exe
+*.dll
+*.pdb
+*.ilk
+*.vcxproj*
+*.sln
+.vs/
