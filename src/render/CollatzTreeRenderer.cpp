@@ -54,67 +54,77 @@ void CollatzTreeRenderer::buildTree(const std::vector<long long>& sequence) {
     std::cout << std::endl;
     
     // Recursively build the tree
-    buildTreeRecursive(root_, sequence, 1, 0.f);
+    buildTreeRecursive(root_, sequence, 0, 0.f, 0);
 }
 
-void CollatzTreeRenderer::buildTreeRecursive(std::shared_ptr<TreeNode> node, const std::vector<long long>& sequence, size_t index, float currentAngle) {
+void CollatzTreeRenderer::buildTreeRecursive(std::shared_ptr<TreeNode> node, const std::vector<long long>& sequence, size_t index, float currentAngle, int depth) {
     if (index >= sequence.size()) {
         return;
     }
     
     long long value = sequence[index];
     
-    // Simulate branching: add both even and odd children
-    for (int parity = 0; parity <= 1; ++parity) {
-        auto child = std::make_shared<TreeNode>();
-        
-        // Calculate radial position
-        float angle = (parity == 0) ? config_.branchAngle : -config_.branchAngle;
-        float newAngle = currentAngle + angle;
-        float radius = 5.f + (sequence.size() - index) * 1.f; // Smaller dynamic radial distance
-        radius = std::min(radius, 150.f); // Clamp to prevent excessive growth
-        float radians = newAngle * 3.14159265f / 180.f;
-        
-        // Invert Y-axis (SFML's Y-axis grows downward)
-        child->position = sf::Vector2f(
-            node->position.x + radius * std::cos(radians),
-            node->position.y - radius * std::sin(radians)
+    // Add even child (n * 2)
+    auto evenChild = std::make_shared<TreeNode>();
+    float evenAngle = currentAngle + config_.branchAngle * (3.14159265f / 180.f);
+    float radius = 50.f;
+    evenChild->position = sf::Vector2f(
+        node->position.x + radius * std::cos(evenAngle),
+        node->position.y - radius * std::sin(evenAngle)
+    );
+    
+    // Assign color based on depth
+    int colorIndex = depth % 40;
+    if (colorIndex < 20) {
+        evenChild->color = sf::Color(255, 100 + colorIndex * 5, 100);
+    } else {
+        evenChild->color = sf::Color(100, 100 + (colorIndex - 20) * 5, 255);
+    }
+    node->children.push_back(evenChild);
+    
+    // Add odd child ((n - 1) / 3) if applicable
+    if (value > 1 && (value - 1) % 3 == 0) {
+        long long oddValue = (value - 1) / 3;
+        auto oddChild = std::make_shared<TreeNode>();
+        float oddAngle = currentAngle - config_.branchAngle * 2 * (3.14159265f / 180.f);
+        oddChild->position = sf::Vector2f(
+            node->position.x + radius * std::cos(oddAngle),
+            node->position.y - radius * std::sin(oddAngle)
         );
+        oddChild->color = sf::Color(255, 100, 100);
+        node->children.push_back(oddChild);
         
-        // Debug print
-        std::cout << "Node: " << value << ", Parity: " << parity << ", Position: (" << child->position.x << ", " << child->position.y << "), Angle: " << newAngle << std::endl;
-        
-        // Update bounding box
+        // Only recurse on the odd child if it matches the sequence
+        if (index + 1 < sequence.size() && sequence[index + 1] == oddValue) {
+            buildTreeRecursive(oddChild, sequence, index + 1, oddAngle, depth + 1);
+        }
+    }
+    
+    // Only recurse on the even child if it matches the sequence
+    if (index + 1 < sequence.size() && sequence[index + 1] == value * 2) {
+        buildTreeRecursive(evenChild, sequence, index + 1, evenAngle, depth + 1);
+    }
+    
+    // Update bounding box
+    for (const auto& child : node->children) {
         if (boundingBox_.width == 0.f && boundingBox_.height == 0.f) {
-            // Initialize bounding box with the first node
             boundingBox_.left = child->position.x;
             boundingBox_.top = child->position.y;
             boundingBox_.width = 0.f;
             boundingBox_.height = 0.f;
         } else {
-            // Update left and width
             if (child->position.x < boundingBox_.left) {
                 boundingBox_.width += boundingBox_.left - child->position.x;
                 boundingBox_.left = child->position.x;
             } else if (child->position.x > boundingBox_.left + boundingBox_.width) {
                 boundingBox_.width = child->position.x - boundingBox_.left;
             }
-            // Update top and height
             if (child->position.y < boundingBox_.top) {
                 boundingBox_.height += boundingBox_.top - child->position.y;
                 boundingBox_.top = child->position.y;
             } else if (child->position.y > boundingBox_.top + boundingBox_.height) {
                 boundingBox_.height = child->position.y - boundingBox_.top;
             }
-        }
-        
-        // Assign color based on parity
-        child->color = (parity == 0) ? sf::Color(100, 200, 255) : sf::Color(255, 100, 100);
-        node->children.push_back(child);
-        
-        // Only recurse on the child that matches the sequence
-        if (parity == (value % 2)) {
-            buildTreeRecursive(child, sequence, index + 1, newAngle);
         }
     }
 }

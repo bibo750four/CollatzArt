@@ -35,7 +35,7 @@ private:
     };
 
     void buildTree(const std::vector<long long>& sequence);
-    void buildTreeRecursive(std::shared_ptr<TreeNode> node, const std::vector<long long>& sequence, size_t index, float currentAngle);
+    void buildTreeRecursive(std::shared_ptr<TreeNode> node, const std::vector<long long>& sequence, size_t index, float currentAngle, int depth);
     void drawTree(sf::RenderWindow& window, const std::shared_ptr<TreeNode>& node, const sf::Vector2f& parentPosition, sf::VertexArray& vertices) const;
 
     RenderConfig config_;
