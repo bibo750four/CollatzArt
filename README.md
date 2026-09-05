@@ -50,7 +50,7 @@ CollatzArt requires the **Simple and Fast Multimedia Library (SFML)** for render
 - Download SFML from the [official website](https://www.sfml-dev.org/download.php).
 - Ensure the SFML binaries are in your system `PATH` or linked correctly in your project.
 
-#### Linux (if applicable)
+#### Linux (not tested)
 - Install SFML using your package manager, e.g., for Ubuntu:
   ```bash
   sudo apt-get install libsfml-dev
